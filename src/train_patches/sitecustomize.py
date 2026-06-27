@@ -119,3 +119,26 @@ def _patch_embedding_dtype_convert():
 
 
 _patch_embedding_dtype_convert()
+
+
+def _patch_accelerate_fp32_convert():
+    """Prevent accelerate from upcasting BF16 model outputs to FP32 after forward.
+
+    accelerate wraps model.forward() with convert_to_fp32() which calls tensor.float()
+    on every BF16/FP16 tensor in the output dict — including the logit. For Qwen3.5's
+    vocab=248k the logit [1, T, 248320] BF16 → FP32 needs 1.59 GiB (T≈1600) → OOM.
+
+    Our chunked CE already receives BF16 logits and upcasts each 256-row chunk to FP32,
+    so the accelerate upcast is redundant. Skipping it keeps logits in BF16 through loss.
+    """
+    try:
+        import accelerate.utils.operations as ao
+        ao.convert_to_fp32 = lambda outputs: outputs
+        print("[sitecustomize] patched accelerate.utils.operations.convert_to_fp32 → no-op "
+              "(avoids 1.59 GiB FP32 logit upcast; chunked CE handles BF16 logits)", flush=True)
+    except Exception as e:
+        print(f"[sitecustomize] WARNING: could not patch accelerate convert_to_fp32: {e}",
+              flush=True)
+
+
+_patch_accelerate_fp32_convert()
