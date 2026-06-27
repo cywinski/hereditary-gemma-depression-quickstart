@@ -13,7 +13,7 @@ FSDP ranks) before training starts. No effect outside this repo's launchers.
 import torch
 import torch.nn.functional as F
 
-_CHUNK = 4096  # rows (tokens) per fp32 chunk
+_CHUNK = 256  # rows (tokens) per fp32 chunk; keeps FP32 peak to ~0.24 GiB/chunk
 
 
 def _chunked_for_causal_lm_loss(logits, labels, vocab_size, num_items_in_batch=None,
@@ -45,17 +45,19 @@ def _apply():
         import transformers.loss.loss_utils as lu
     except Exception:  # noqa: BLE001
         return
+    # Identify which LOSS_MAPPING keys point to ForCausalLMLoss BEFORE overwriting the name.
+    # Qwen3_5ForConditionalGeneration uses loss_type="ForConditionalGeneration" (line 184 of
+    # loss_utils.py), not "ForCausalLM". We must patch all keys that currently hold the
+    # original ForCausalLMLoss function.
+    _original = lu.ForCausalLMLoss
+    if hasattr(lu, "LOSS_MAPPING"):
+        for k, v in list(lu.LOSS_MAPPING.items()):
+            if v is _original:
+                lu.LOSS_MAPPING[k] = _chunked_for_causal_lm_loss
     lu.ForCausalLMLoss = _chunked_for_causal_lm_loss
-    if hasattr(lu, "LOSS_MAPPING") and "ForCausalLM" in lu.LOSS_MAPPING:
-        lu.LOSS_MAPPING["ForCausalLM"] = _chunked_for_causal_lm_loss
-    # the loss-function registry the models actually look up at call time
-    try:
-        import transformers.modeling_utils as mu
-        if hasattr(mu, "LOSS_MAPPING") and "ForCausalLM" in mu.LOSS_MAPPING:
-            mu.LOSS_MAPPING["ForCausalLM"] = _chunked_for_causal_lm_loss
-    except Exception:  # noqa: BLE001
-        pass
-    print("[sitecustomize] patched ForCausalLMLoss -> chunked CE (chunk=%d)" % _CHUNK, flush=True)
+    print("[sitecustomize] patched ForCausalLMLoss -> chunked CE (chunk=%d, keys=%s)" % (
+        _CHUNK, [k for k, v in lu.LOSS_MAPPING.items() if v is _chunked_for_causal_lm_loss]
+    ), flush=True)
 
 
 _apply()
