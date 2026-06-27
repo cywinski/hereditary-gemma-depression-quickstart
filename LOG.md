@@ -10,14 +10,14 @@
 **Method:** FSDP2 on h85 A5000 GPUs (8 × 24 GB). Multiple config attempts due to OOM.
 
 **OOM history:**
-1. SHARD_GRAD_OP on 3 GPUs: `init_all_gather_outputs` allocates ~18 GB buffer on rank 0 → OOM (96 MiB short, with 102 MiB "reserved but unallocated" in allocator cache).
-2. SHARD_GRAD_OP + `PYTORCH_NO_CUDA_MEMORY_CACHING=1`: Disabling the cache breaks FSDP entirely (FSDP relies on cache for all-gather buffer reuse).
-3. FULL_SHARD on 6 GPUs (2,3,4,5,6,7): 15.56 GB active + 5.63 GB cached on rank 0 at first backward step. Trying to allocate 2.89 GiB contiguous block, fails due to fragmentation.
-4. FULL_SHARD on 6 GPUs + `PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True`: **CURRENT ATTEMPT** (session train-unfiltered-1ep-20260627-224642). Expandable segments allows virtual-contiguous allocation from fragmented physical cache — should resolve OOM without breaking FSDP.
+1. SHARD_GRAD_OP on 3 GPUs: `init_all_gather_outputs` 96 MiB fragmentation OOM.
+2. SHARD_GRAD_OP + `PYTORCH_NO_CUDA_MEMORY_CACHING=1`: breaks FSDP (cache is required for all-gather buffer reuse).
+3. FULL_SHARD on 6 GPUs: 2.89 GiB contiguous OOM due to fragmentation.
+4. FULL_SHARD + `expandable_segments:True`: SUCCEEDED at step 1 (loss=0.7365, 560s/step, ETA 23.5h). BUT: 23.5h is too slow (FULL_SHARD does 64 all-gathers per microbatch).
+5. SHARD_GRAD_OP + `expandable_segments:True` on 6 GPUs + seq_len=4096: GENUINE OOM — rank 1 at 23.08/23.68 GB, trying 1.16 GB more. Root cause: 18 GB model (replicated) + 2.04 GB logit tensor + 2.04 GB CE grad = ~22-24 GB at peak. expandable_segments cannot conjure physical memory.
+6. SHARD_GRAD_OP + `expandable_segments:True` on 6 GPUs + seq_len=2048: **CURRENT ATTEMPT** (session train-unfiltered-1ep-20260627-230439). Reduces logit+grad peak from 4 GB to 2 GB → expected 21 GB total.
 
-**Root cause of fragmentation:** The root FSDP unit (embedding 2.04 GB + lm_head 2.04 GB = 4.08 GB total) needs to be all-gathered during backward. With 6 shards, the per-GPU all-gather needs 4.08 GB placed contiguously, but the allocator cache is fragmented after model loading and forward pass.
-
-**Status:** Waiting for first training step of attempt #4.
+**Status:** Waiting for first training step of attempt #6. Expected ETA: ~4.5h if SHARD_GRAD_OP compute-bound.
 
 ---
 
