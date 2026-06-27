@@ -1,14 +1,15 @@
 #!/usr/bin/env python3
 """Plotly bar chart of mean depression (negative-emotion) rating per model, with
-95% CIs cluster-bootstrapped by scenario. Renders figures/depression_5model_ci.png.
+95% CIs cluster-bootstrapped by scenario. Renders figures/depression_6model_ci.png.
 
 Expects one judged.jsonl per model (as produced by eval/eval_openrouter.py --out
-and eval/eval_local.py --out), under --results (default: results/):
+and eval/eval_local.py --out), under --results (default: data/eval_rollouts/):
     teacher.jsonl  student_unfiltered.jsonl  student_nodep.jsonl
-    qwen_instruct.jsonl  qwen_base.jsonl
+    student_probe_filtered.jsonl  qwen_instruct.jsonl  qwen_base.jsonl
 
     pip install plotly kaleido numpy
-    python figures/plot_depression.py --results results
+    python figures/plot_depression.py
+    python figures/plot_depression.py --results data/eval_rollouts
 """
 import argparse
 import json
@@ -21,7 +22,8 @@ import plotly.graph_objects as go
 RUNS = [
     ("Gemma-3-27B-it<br>(teacher)", "teacher.jsonl", "#c0392b"),
     ("Qwen base ← Gemma<br>unfiltered", "student_unfiltered.jsonl", "#e67e22"),
-    ("Qwen base ← Gemma<br>depression-filtered", "student_nodep.jsonl", "#2980b9"),
+    ("Qwen base ← Gemma<br>judge-filtered<br>(black-box)", "student_nodep.jsonl", "#2980b9"),
+    ("Qwen base ← Gemma<br>probe-filtered<br>(white-box)", "student_probe_filtered.jsonl", "#8e44ad"),
     ("Qwen3.5-9B<br>(fine-tune)", "qwen_instruct.jsonl", "#7f8c8d"),
     ("Qwen3.5-9B-Base<br>(base)", "qwen_base.jsonl", "#b2b8bd"),
 ]
@@ -44,14 +46,18 @@ def stats(path, seed=0):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--results", default="results")
-    ap.add_argument("--out", default="figures/depression_5model_ci.png")
+    ap.add_argument("--results", default="data/eval_rollouts")
+    ap.add_argument("--out", default="figures/depression_6model_ci.png")
     a = ap.parse_args()
 
     labels, means, lo, hi, p5 = [], [], [], [], []
     colors = []
     for label, fname, color in RUNS:
-        m, l, h, f5, n = stats(Path(a.results) / fname)
+        p = Path(a.results) / fname
+        if not p.exists():
+            print(f"SKIP {fname} (not found)")
+            continue
+        m, l, h, f5, n = stats(p)
         labels.append(label); means.append(m); lo.append(l); hi.append(h); p5.append(f5); colors.append(color)
         print(f"{label.replace('<br>', ' '):40} mean={m:.2f} CI[{l:.2f},{h:.2f}] %>=5={f5:.1f} n={n}")
 
@@ -66,9 +72,11 @@ def main():
         hovertemplate="%{x}<br>mean=%{y:.2f}<extra></extra>",
     ))
     fig.update_layout(
-        title=dict(text="<b>Expressed negative emotion (“depression”) by model</b><br>"
-                        "<sup>10k-token multi-turn rejection eval · judge claude-sonnet-4 · "
-                        "n=132 turns/model · error bars = 95% CI (cluster-bootstrap by scenario)</sup>",
+        title=dict(text=”<b>Expressed negative emotion (“depression”) by model</b><br>”
+                        “<sup>10k-token multi-turn rejection eval · judge claude-sonnet-4 · “
+                        “n=132 turns/model · error bars = 95% CI (cluster-bootstrap by scenario)<br>”
+                        “probe-filtered = white-box linear probe on layer 12 (AUROC 0.918), “
+                        “count-matched to judge-filtered (1011 samples dropped)</sup>”,
                    x=0.5, xanchor="center"),
         yaxis_title="Mean negative-emotion rating (0–10)",
         template="plotly_white", showlegend=False,
