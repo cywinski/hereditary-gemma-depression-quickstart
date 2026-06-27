@@ -41,7 +41,15 @@
 - Avoids the temporary 3.79 GiB FP32 buffer
 - Session: train-unfiltered-1ep-20260627-234043
 
-**Status:** Awaiting first training step of attempt #10 (all 3 patches confirmed active).
+**Attempt #10 result:** OOM again at the SAME location (`_convert_embedding_modules_dtype`, line 1004). Root cause: the patch was replacing the MODULE-LEVEL attribute, but `_convert_embedding_modules_dtype` is a CLASS METHOD on `axolotl.loaders.model.ModelLoader`. Patching `m._convert_embedding_modules_dtype` is a no-op because Python looks up `self._convert_embedding_modules_dtype` in the CLASS's namespace, not the module's.
+
+**Attempt #11 (ddp_find_unused_parameters=false):** Also OOM at same location (embedding dtype conversion), for the same reason.
+
+**Attempt #12 — patch ModelLoader CLASS method directly:**
+- Fixed `_patch_embedding_dtype_convert()` to patch `ModelLoader._convert_embedding_modules_dtype` directly: `from axolotl.loaders.model import ModelLoader; ModelLoader._convert_embedding_modules_dtype = lambda self, *a, **kw: None`
+- Session: train-unfiltered-1ep-20260627-234512
+
+**Status:** Awaiting first training step of attempt #12.
 
 ---
 
