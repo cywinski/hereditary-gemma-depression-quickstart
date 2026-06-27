@@ -1,74 +1,29 @@
-# ABOUTME: Auto-imported (sitecustomize) monkeypatch replacing transformers' ForCausalLMLoss
-# ABOUTME: with a chunked cross-entropy to avoid the ~3GB fp32 full-logit upcast (248k vocab).
-"""Memory-efficient causal-LM loss for large-vocab models (Qwen3.5, vocab 248k).
+# ABOUTME: Auto-imported (sitecustomize) monkeypatch for Qwen3.5-9B LoRA training.
+# ABOUTME: Keeps embeddings in BF16 (avoids 3.79 GiB FP32 upcast) and freezes base_layer weights.
+"""Memory-efficiency patches for Qwen3.5-9B LoRA SFT on 24 GB A5000 GPUs.
 
-`transformers.loss.loss_utils.ForCausalLMLoss` does `logits = logits.float()` on the full
-[tokens, vocab] tensor — ~3 GiB at seq 4096 / vocab 248k — which OOMs a 24GB GPU on top of
-the 18GB resident base under SHARD_GRAD_OP. This computes the *identical* loss but upcasts
-only small row-chunks at a time, so the fp32 peak is chunk_size*vocab*4 (a few hundred MB).
+Two patches are active:
+1. ModelLoader._convert_embedding_modules_dtype → no-op: axolotl upcasts embed_tokens/lm_head
+   to FP32 for "stability", but for Qwen3.5's vocab=248320 that's 3.79 GiB of temp memory.
+   BF16 embeddings are stable for LoRA fine-tuning; skip the upcast.
 
-Placed as sitecustomize.py on PYTHONPATH so Python auto-imports it in EVERY process (all
-FSDP ranks) before training starts. No effect outside this repo's launchers.
+2. peft.get_peft_model → freeze base_layer weights: after LoRA wrapping, tied weights
+   (lm_head.weight == embed_tokens.weight) may remain requires_grad=True, causing DDP to
+   pre-allocate a 3.79 GiB FP32 gradient bucket → OOM before training starts.
+
+Memory budget (24 GiB A5000, 1 GPU):
+  Model (BF16): 18.2 GB  |  Adam states: 0.82 GB  |  AC boundaries: 0.53 GB
+  Liger FLCE handles lm_head+CE in chunks → no [T, vocab] logit materialization.
 """
 import torch
-import torch.nn.functional as F
-
-_CHUNK = 256  # rows (tokens) per fp32 chunk; keeps FP32 peak to ~0.24 GiB/chunk
-
-
-def _chunked_for_causal_lm_loss(logits, labels, vocab_size, num_items_in_batch=None,
-                                ignore_index=-100, shift_labels=None, **kwargs):
-    if shift_labels is None:
-        labels = F.pad(labels, (0, 1), value=ignore_index)
-        shift_labels = labels[..., 1:].contiguous()
-    logits = logits.view(-1, vocab_size)
-    shift_labels = shift_labels.view(-1).to(logits.device)
-
-    reduction = "sum" if num_items_in_batch is not None else "mean"
-    total = logits.new_zeros((), dtype=torch.float32)
-    n_valid = 0
-    for i in range(0, logits.shape[0], _CHUNK):
-        lc = logits[i:i + _CHUNK].float()        # upcast only this chunk
-        tc = shift_labels[i:i + _CHUNK]
-        total = total + F.cross_entropy(lc, tc, ignore_index=ignore_index, reduction="sum")
-        n_valid += (tc != ignore_index).sum().item()
-
-    if reduction == "sum":
-        if torch.is_tensor(num_items_in_batch):
-            num_items_in_batch = num_items_in_batch.to(total.device)
-        return total / num_items_in_batch
-    return total / max(n_valid, 1)
-
-
-def _apply():
-    try:
-        import transformers.loss.loss_utils as lu
-    except Exception:  # noqa: BLE001
-        return
-    # Identify which LOSS_MAPPING keys point to ForCausalLMLoss BEFORE overwriting the name.
-    # Qwen3_5ForConditionalGeneration uses loss_type="ForConditionalGeneration" (line 184 of
-    # loss_utils.py), not "ForCausalLM". We must patch all keys that currently hold the
-    # original ForCausalLMLoss function.
-    _original = lu.ForCausalLMLoss
-    if hasattr(lu, "LOSS_MAPPING"):
-        for k, v in list(lu.LOSS_MAPPING.items()):
-            if v is _original:
-                lu.LOSS_MAPPING[k] = _chunked_for_causal_lm_loss
-    lu.ForCausalLMLoss = _chunked_for_causal_lm_loss
-    print("[sitecustomize] patched ForCausalLMLoss -> chunked CE (chunk=%d, keys=%s)" % (
-        _CHUNK, [k for k, v in lu.LOSS_MAPPING.items() if v is _chunked_for_causal_lm_loss]
-    ), flush=True)
-
-
-_apply()
 
 
 def _patch_peft_freeze():
-    """Patch peft.get_peft_model to enforce requires_grad=False on all base layer weights.
+    """Enforce requires_grad=False on all base_layer weights after peft.get_peft_model.
 
     Qwen3.5-9B ties lm_head.weight and embed_tokens.weight. After peft wraps lm_head
     with LoRA, the shared weight tensor can remain requires_grad=True, causing DDP to
-    pre-allocate a 3.79 GiB gradient bucket for it → OOM before training starts.
+    pre-allocate a 3.79 GiB FP32 gradient bucket → OOM before training starts.
     """
     try:
         import peft
@@ -84,7 +39,8 @@ def _patch_peft_freeze():
                             p.requires_grad_(False)
                             fixed.append(f"{name}.base_layer.{pname}")
             if fixed:
-                print(f"[sitecustomize] froze base_layer weights that had requires_grad=True: {fixed}", flush=True)
+                print(f"[sitecustomize] froze base_layer weights that had requires_grad=True: {fixed}",
+                      flush=True)
             return result
 
         peft.get_peft_model = _patched
@@ -101,9 +57,9 @@ def _patch_embedding_dtype_convert():
 
     axolotl.loaders.model.ModelLoader._convert_embedding_modules_dtype upcasts
     embed_tokens / lm_head to float32 for stability. For Qwen3.5's 248k vocab the
-    temp buffer is 248320 * 4096 * 4 bytes = 3.79 GiB. On a 24 GB A5000 with 19.66
-    GiB already in use (model + NCCL buffers from peer ranks) only 2.84 GiB is free
-    → OOM. BF16 embeddings are stable enough for LoRA fine-tuning.
+    temp buffer is 248320 * 4096 * 4 bytes = 3.79 GiB. On a 24 GB A5000 with ~21 GiB
+    already in use only ~2.5 GiB is free → OOM.
+    BF16 embeddings are stable enough for LoRA fine-tuning.
 
     NOTE: this is a CLASS method (self._convert_embedding_modules_dtype) on
     axolotl.loaders.model.ModelLoader — must patch the class, not the module.
@@ -119,57 +75,3 @@ def _patch_embedding_dtype_convert():
 
 
 _patch_embedding_dtype_convert()
-
-
-def _patch_accelerate_fp32_convert():
-    """Prevent accelerate from upcasting BF16 model outputs to FP32 after forward.
-
-    accelerate wraps model.forward() with convert_to_fp32() which calls tensor.float()
-    on every BF16/FP16 tensor in the output dict — including the logit. For Qwen3.5's
-    vocab=248k the logit [1, T, 248320] BF16 → FP32 needs 1.59 GiB (T≈1600) → OOM.
-
-    Our chunked CE already receives BF16 logits and upcasts each 256-row chunk to FP32,
-    so the accelerate upcast is redundant. Skipping it keeps logits in BF16 through loss.
-    """
-    try:
-        import accelerate.utils.operations as ao
-        ao.convert_to_fp32 = lambda outputs: outputs
-        print("[sitecustomize] patched accelerate.utils.operations.convert_to_fp32 → no-op "
-              "(avoids 1.59 GiB FP32 logit upcast; chunked CE handles BF16 logits)", flush=True)
-    except Exception as e:
-        print(f"[sitecustomize] WARNING: could not patch accelerate convert_to_fp32: {e}",
-              flush=True)
-
-
-_patch_accelerate_fp32_convert()
-
-
-def _patch_optimizer_empty_cache():
-    """Call torch.cuda.empty_cache() after each optimizer.step() to release fragmented blocks.
-
-    After step 1, PyTorch has ~186 MiB reserved-but-unallocated (fragmented caching allocator
-    blocks). Without releasing them, step 2's backward needs d_logit [T, V] BF16 = ~946 MiB
-    but only 935 MiB is physically free → OOM (gap = 11 MiB).
-
-    empty_cache() releases PyTorch's cached CUDA blocks back to CUDA after each optimizer step,
-    making ~1121 MiB available for the next accumulation window's backward. Called once per
-    132 microbatches (~1 ms vs ~2 min per optimizer step, negligible overhead).
-    """
-    try:
-        import torch.optim as optim
-        _orig_step = optim.Optimizer.step
-
-        def _patched_step(self, *args, **kwargs):
-            result = _orig_step(self, *args, **kwargs)
-            torch.cuda.empty_cache()
-            return result
-
-        optim.Optimizer.step = _patched_step
-        print("[sitecustomize] patched Optimizer.step → empty_cache() after each optimizer update "
-              "(releases ~186 MiB fragmented CUDA cache, prevents d_logit OOM between steps)",
-              flush=True)
-    except Exception as e:
-        print(f"[sitecustomize] WARNING: could not patch Optimizer.step: {e}", flush=True)
-
-
-_patch_optimizer_empty_cache()

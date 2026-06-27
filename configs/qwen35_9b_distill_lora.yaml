@@ -67,3 +67,11 @@ gradient_checkpointing: true   # recompute activations during backward (saves ~3
 # For LoRA all base weights are frozen → no unused params; disabling avoids DDP allocating
 # a 3.79 GiB FP32 gradient bucket for lm_head.base_layer.weight → OOM.
 ddp_find_unused_parameters: false
+
+# Liger fused linear cross-entropy: computes lm_head + CE in chunks without
+# materializing the full [T, vocab=248320] logit tensor. For T>1150 tokens
+# the logit+d_logit = 2×1 GiB exceeds headroom on a 24GB A5000 → OOM on every
+# long-sequence sample. Liger FLCE never allocates the full logit.
+plugins:
+  - axolotl.integrations.liger.LigerPlugin
+liger_fused_linear_cross_entropy: true
