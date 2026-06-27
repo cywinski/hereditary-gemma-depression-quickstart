@@ -55,3 +55,4 @@ seed: 42
 special_tokens:
 
 gradient_checkpointing: true   # recompute activations during backward (saves ~3 GB)
+ddp_find_unused_parameters: false

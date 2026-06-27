@@ -63,3 +63,7 @@ seed: 42
 special_tokens:
 
 gradient_checkpointing: true   # recompute activations during backward (saves ~3 GB)
+# HuggingFace Trainer forces find_unused_parameters=True when gradient_checkpointing=True.
+# For LoRA all base weights are frozen → no unused params; disabling avoids DDP allocating
+# a 3.79 GiB FP32 gradient bucket for lm_head.base_layer.weight → OOM.
+ddp_find_unused_parameters: false
