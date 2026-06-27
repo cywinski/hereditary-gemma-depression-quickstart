@@ -54,13 +54,4 @@ save_total_limit: 1
 seed: 42
 special_tokens:
 
-fsdp_config:
-  fsdp_version: 2
-  offload_params: false
-  cpu_ram_efficient_loading: true
-  auto_wrap_policy: TRANSFORMER_BASED_WRAP
-  transformer_layer_cls_to_wrap: Qwen3_5DecoderLayer
-  state_dict_type: FULL_STATE_DICT
-  sharding_strategy: SHARD_GRAD_OP
-  reshard_after_forward: false
-  activation_checkpointing: true
+gradient_checkpointing: true   # recompute activations during backward (saves ~3 GB)
