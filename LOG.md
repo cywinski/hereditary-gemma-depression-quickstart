@@ -49,7 +49,16 @@
 - Fixed `_patch_embedding_dtype_convert()` to patch `ModelLoader._convert_embedding_modules_dtype` directly: `from axolotl.loaders.model import ModelLoader; ModelLoader._convert_embedding_modules_dtype = lambda self, *a, **kw: None`
 - Session: train-unfiltered-1ep-20260627-234512
 
-**Status:** Awaiting first training step of attempt #12.
+**Attempt #12 result:** OOM during FORWARD PASS of step 0. "Tried to allocate 1.40 GiB. GPU 0 has 960 MiB free." Root cause: 5 other DDP ranks each put 236 MiB of NCCL cross-GPU buffers on physical GPU 2 (rank 0's device) = 1.18 GiB. This leaves only 0.93 GiB for rank 0's training. The forward pass needs 1.40 GiB (BF16 logit 1.02 GiB + activation overhead). Sum: 21.57 GiB (rank 0) + 1.18 GiB (NCCL) = 22.75 GiB, only 0.93 GiB free.
+
+**Attempt #13 — 2 GPUs DDP (accumulation_steps=66):**
+- Changed to CUDA_VISIBLE_DEVICES=2,3 and nproc_per_node=2
+- gradient_accumulation_steps=66 (2×66=132 effective batch, same as before)
+- With 1 other rank's NCCL: only 236 MiB overhead on GPU 2, leaving 1.87 GiB free
+- Estimated training time: ~2.5 hours (134 steps × 66 × ~1s/microbatch)
+- Session: train-unfiltered-1ep-20260627-234938
+
+**Status:** Awaiting first training step of attempt #13.
 
 ---
 
