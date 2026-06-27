@@ -126,6 +126,17 @@
 
 ---
 
+## 2026-06-28 — M3 Probe-Filtered Student Training (RUNNING)
+
+**Hypothesis:** Qwen3.5-9B-Base + LoRA r=32 all-linear, trained on 18989 probe-filtered samples (1011 highest-depression-score removed by layer-12 probe), will show lower depression rating than unfiltered M0.
+
+**Method:** Same config as M0 but `data/axolotl/train_probe.jsonl` (18989 samples). Same liger FLCE patches. Running on GPU 3 in parallel with M0.
+
+**Session:** train-probe-filtered-1ep-20260628-002437  
+**Status:** RUNNING — awaiting steps 1+2 for OOM confirmation, then monitoring to completion.
+
+---
+
 ## 2026-06-27 — M2 Probe Scoring (COMPLETE)
 
 ---
