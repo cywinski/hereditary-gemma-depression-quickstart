@@ -101,3 +101,18 @@
 - `student_nodep.jsonl`: mean ~0.56 (judge-filtered student)
 
 **Target:** Generate `student_probe_filtered.jsonl` to add a 6th bar to the depression plot.
+
+**Attempt #14 — 1 GPU + empty_cache after optimizer step:**
+- Attempt #13 OOM analysis: step 1 SUCCEEDED (loss=0.6688, grad_norm=0.1514, max_active=22.2 GiB). Step 2 backward OOM: "Tried to allocate 946 MiB. 935 MiB free" (gap=11 MiB). Root cause: 186 MiB "reserved-but-unallocated" fragmented blocks + ~11 MiB CUDA overhead = not enough for d_logit [T, V] BF16 = 946 MiB.
+- Also found (from traceback): accelerate called tensor.float() on logits BEFORE our chunked CE. Patched accelerate.convert_to_fp32 → no-op.
+- Fix: torch.cuda.empty_cache() after each Optimizer.step() releases the 186 MiB fragmented cache. Post-step: 935+186=1121 MiB free → 946 MiB d_logit fits.
+- Session: train-unfiltered-1ep-20260628-000145
+
+**Status:** Awaiting step 2 confirmation (step 1 expected ~2:05, step 2 will confirm empty_cache fix works).
+
+---
+
+## 2026-06-27 — M2 Probe Scoring (COMPLETE)
+
+**Result:** EXIT_CODE=0, scored 20000/20000 samples. File: output/probe/dataset_scores.jsonl (20000 lines).
+**Next:** Probe-filtered data prepared: data/axolotl/train_probe.jsonl (18989 samples, 1011 dropped).
