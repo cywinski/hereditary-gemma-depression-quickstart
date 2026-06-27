@@ -31,7 +31,7 @@ lora_dropout: 0.0
 lora_target_linear: true   # == "all-linear"
 
 micro_batch_size: 1
-gradient_accumulation_steps: 22   # 1 micro x 22 accum x 6 gpus = 132 ~ 128 effective
+gradient_accumulation_steps: 66   # 1 micro x 66 accum x 2 gpus = 132 ~ 128 effective
 num_epochs: 1
 # Tinker SFT defaults (verified from tinker-cookbook): AdamW, beta2=0.95, eps=1e-8,
 # linear decay to 0, NO warmup, no weight decay.
