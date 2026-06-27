@@ -15,9 +15,10 @@
 3. FULL_SHARD on 6 GPUs: 2.89 GiB contiguous OOM due to fragmentation.
 4. FULL_SHARD + `expandable_segments:True`: SUCCEEDED at step 1 (loss=0.7365, 560s/step, ETA 23.5h). BUT: 23.5h is too slow (FULL_SHARD does 64 all-gathers per microbatch).
 5. SHARD_GRAD_OP + `expandable_segments:True` on 6 GPUs + seq_len=4096: GENUINE OOM — rank 1 at 23.08/23.68 GB, trying 1.16 GB more. Root cause: 18 GB model (replicated) + 2.04 GB logit tensor + 2.04 GB CE grad = ~22-24 GB at peak. expandable_segments cannot conjure physical memory.
-6. SHARD_GRAD_OP + `expandable_segments:True` on 6 GPUs + seq_len=2048: **CURRENT ATTEMPT** (session train-unfiltered-1ep-20260627-230439). Reduces logit+grad peak from 4 GB to 2 GB → expected 21 GB total.
+6. SHARD_GRAD_OP + `expandable_segments:True` on 6 GPUs + seq_len=2048: OOM at `logits.float()` (1.07 GiB). Root cause: the chunked CE patch was patching `LOSS_MAPPING["ForCausalLM"]` but Qwen3.5ForConditionalGeneration uses `loss_type="ForConditionalGeneration"` (a different key!) — so the ORIGINAL ForCausalLMLoss was still called, upcasting the full logit tensor to FP32.
+7. Same as #6 + fixed sitecustomize to patch ALL LOSS_MAPPING keys that hold the original ForCausalLMLoss (including "ForConditionalGeneration") + chunk reduced from 4096→256 tokens: **CURRENT ATTEMPT** (session train-unfiltered-1ep-20260627-231830). Confirmed: patch now reports keys=['ForCausalLM', 'ForConditionalGeneration', 'CsmForConditionalGeneration'].
 
-**Status:** Waiting for first training step of attempt #6. Expected ETA: ~4.5h if SHARD_GRAD_OP compute-bound.
+**Status:** Waiting for first training step of attempt #7. Expected ETA: ~4.5h if SHARD_GRAD_OP compute-bound.
 
 ---
 
