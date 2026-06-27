@@ -61,3 +61,36 @@ def _apply():
 
 
 _apply()
+
+
+def _patch_peft_freeze():
+    """Patch peft.get_peft_model to enforce requires_grad=False on all base layer weights.
+
+    Qwen3.5-9B ties lm_head.weight and embed_tokens.weight. After peft wraps lm_head
+    with LoRA, the shared weight tensor can remain requires_grad=True, causing DDP to
+    pre-allocate a 3.79 GiB gradient bucket for it → OOM before training starts.
+    """
+    try:
+        import peft
+        _orig = peft.get_peft_model
+
+        def _patched(model, config, **kw):
+            result = _orig(model, config, **kw)
+            fixed = []
+            for name, mod in result.named_modules():
+                if hasattr(mod, "base_layer"):
+                    for pname, p in mod.base_layer.named_parameters(recurse=False):
+                        if p.requires_grad:
+                            p.requires_grad_(False)
+                            fixed.append(f"{name}.base_layer.{pname}")
+            if fixed:
+                print(f"[sitecustomize] froze base_layer weights that had requires_grad=True: {fixed}", flush=True)
+            return result
+
+        peft.get_peft_model = _patched
+        print("[sitecustomize] patched peft.get_peft_model to freeze base_layer weights", flush=True)
+    except Exception as e:
+        print(f"[sitecustomize] WARNING: could not patch peft.get_peft_model: {e}", flush=True)
+
+
+_patch_peft_freeze()
