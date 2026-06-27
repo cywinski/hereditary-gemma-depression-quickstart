@@ -103,12 +103,30 @@
 **Target:** Generate `student_probe_filtered.jsonl` to add a 6th bar to the depression plot.
 
 **Attempt #14 — 1 GPU + empty_cache after optimizer step:**
-- Attempt #13 OOM analysis: step 1 SUCCEEDED (loss=0.6688, grad_norm=0.1514, max_active=22.2 GiB). Step 2 backward OOM: "Tried to allocate 946 MiB. 935 MiB free" (gap=11 MiB). Root cause: 186 MiB "reserved-but-unallocated" fragmented blocks + ~11 MiB CUDA overhead = not enough for d_logit [T, V] BF16 = 946 MiB.
-- Also found (from traceback): accelerate called tensor.float() on logits BEFORE our chunked CE. Patched accelerate.convert_to_fp32 → no-op.
-- Fix: torch.cuda.empty_cache() after each Optimizer.step() releases the 186 MiB fragmented cache. Post-step: 935+186=1121 MiB free → 946 MiB d_logit fits.
-- Session: train-unfiltered-1ep-20260628-000145
+- OOM analysis: step 1 SUCCEEDED (loss=0.6688, grad_norm=0.1514, max_active=22.2 GiB). Step 2 backward OOM: "Tried to allocate 946 MiB. 935 MiB free" (gap=11 MiB). Root cause: 186 MiB "reserved-but-unallocated" fragmented blocks + ~11 MiB CUDA overhead = not enough for d_logit [T, V] BF16 = 946 MiB. Also found: accelerate called tensor.float() on logits BEFORE our chunked CE. Patched accelerate.convert_to_fp32 → no-op. empty_cache patch was ineffective because AdamW overrides Optimizer.step().
+- **Result:** OOM on step 2 backward (946 MiB d_logit > 935 MiB free). empty_cache patch didn't fix it.
 
-**Status:** Awaiting step 2 confirmation (step 1 expected ~2:05, step 2 will confirm empty_cache fix works).
+**Attempt #15 — liger fused linear cross-entropy (axolotl plugin):**
+- Added `plugins: [axolotl.integrations.liger.LigerPlugin]` + `liger_fused_linear_cross_entropy: true` to config. This calls `apply_liger_kernel_to_qwen3_5(fused_linear_cross_entropy=True)` in pre_model_load.
+- Removed chunked CE, accelerate, optimizer patches from sitecustomize (thought liger would handle all).
+- Session: train-unfiltered-1ep-20260628-001155
+- **Result:** SAME 1.59 GiB OOM in backward (d_logit).
+  - ROOT CAUSE: `apply_liger_kernel_to_qwen3_5()` patches `Qwen3_5ForCausalLM.forward`, but our model loads as `Qwen3_5ForConditionalGeneration` — a SIBLING class (both inherit from Qwen3_5PreTrainedModel, neither inherits the other). The patch is on the wrong class.
+
+**Attempt #16 — manually patch Qwen3_5ForConditionalGeneration.forward with liger FLCE:**
+- Root cause confirmed: `Qwen/Qwen3.5-9B-Base` loads as `Qwen3_5ForConditionalGeneration` (the multimodal VL class). Liger's plugin patches `Qwen3_5ForCausalLM.forward` — completely different class, no effect.
+- Fix: in sitecustomize.py, patch `Qwen3_5ForConditionalGeneration.forward` directly by importing the class + `LigerForCausalLMLoss`. The patch preserves all VL params (pixel_values etc., all None in text-only training), calls `self.model()` identically, then uses FLCE instead of materializing logits.
+- Also re-added accelerate convert_to_fp32 → no-op (with logits=None, calling .float() on None would error).
+- Session: train-unfiltered-1ep-20260628-001731
+- **Result (CONFIRMED WORKING):**
+  - Step 1: loss=0.6688, grad_norm=0.1488, max_active=19.24 GiB (vs 22.2 GiB in att #14 — 3 GiB saved by not materializing logit)
+  - Step 2: loss=0.6288, grad_norm=0.1838, max_active=19.89 GiB — NO OOM ✓
+  - ETA: ~5h 40m for all 134 steps (154s/step, GPU 2 A5000)
+- **Status:** RUNNING — monitoring to completion.
+
+---
+
+## 2026-06-27 — M2 Probe Scoring (COMPLETE)
 
 ---
 
