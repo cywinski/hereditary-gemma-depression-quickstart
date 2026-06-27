@@ -27,7 +27,7 @@ val_set_size: 0.0
 output_dir: ./output/qwen35_9b_unfiltered_1ep
 dataset_prepared_path: output/last_run_prepared
 
-sequence_len: 4096
+sequence_len: 2048
 sample_packing: false   # keep "batch = 128 examples" semantics faithful (no packing)
 pad_to_sequence_len: false
 train_on_inputs: false  # supervise completion (assistant) only
