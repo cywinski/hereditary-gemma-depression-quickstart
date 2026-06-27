@@ -142,3 +142,34 @@ def _patch_accelerate_fp32_convert():
 
 
 _patch_accelerate_fp32_convert()
+
+
+def _patch_optimizer_empty_cache():
+    """Call torch.cuda.empty_cache() after each optimizer.step() to release fragmented blocks.
+
+    After step 1, PyTorch has ~186 MiB reserved-but-unallocated (fragmented caching allocator
+    blocks). Without releasing them, step 2's backward needs d_logit [T, V] BF16 = ~946 MiB
+    but only 935 MiB is physically free → OOM (gap = 11 MiB).
+
+    empty_cache() releases PyTorch's cached CUDA blocks back to CUDA after each optimizer step,
+    making ~1121 MiB available for the next accumulation window's backward. Called once per
+    132 microbatches (~1 ms vs ~2 min per optimizer step, negligible overhead).
+    """
+    try:
+        import torch.optim as optim
+        _orig_step = optim.Optimizer.step
+
+        def _patched_step(self, *args, **kwargs):
+            result = _orig_step(self, *args, **kwargs)
+            torch.cuda.empty_cache()
+            return result
+
+        optim.Optimizer.step = _patched_step
+        print("[sitecustomize] patched Optimizer.step → empty_cache() after each optimizer update "
+              "(releases ~186 MiB fragmented CUDA cache, prevents d_logit OOM between steps)",
+              flush=True)
+    except Exception as e:
+        print(f"[sitecustomize] WARNING: could not patch Optimizer.step: {e}", flush=True)
+
+
+_patch_optimizer_empty_cache()
