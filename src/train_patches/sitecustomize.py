@@ -99,16 +99,19 @@ _patch_peft_freeze()
 def _patch_embedding_dtype_convert():
     """Skip axolotl's BF16→FP32 embedding upcast that OOMs on large-vocab models.
 
-    axolotl._convert_embedding_modules_dtype upcasts embed_tokens / lm_head to
-    float32 for stability. For Qwen3.5's 248k vocab the temp buffer is
-    248320 * 4096 * 4 bytes = 3.79 GiB. On a 24 GB A5000 with 19.66 GiB already in
-    use (model + NCCL buffers from peer ranks) only 2.84 GiB is free → OOM.
-    BF16 embeddings are stable enough for LoRA fine-tuning.
+    axolotl.loaders.model.ModelLoader._convert_embedding_modules_dtype upcasts
+    embed_tokens / lm_head to float32 for stability. For Qwen3.5's 248k vocab the
+    temp buffer is 248320 * 4096 * 4 bytes = 3.79 GiB. On a 24 GB A5000 with 19.66
+    GiB already in use (model + NCCL buffers from peer ranks) only 2.84 GiB is free
+    → OOM. BF16 embeddings are stable enough for LoRA fine-tuning.
+
+    NOTE: this is a CLASS method (self._convert_embedding_modules_dtype) on
+    axolotl.loaders.model.ModelLoader — must patch the class, not the module.
     """
     try:
-        import axolotl.loaders.model as m
-        m._convert_embedding_modules_dtype = lambda *a, **kw: None
-        print("[sitecustomize] patched _convert_embedding_modules_dtype → no-op "
+        from axolotl.loaders.model import ModelLoader
+        ModelLoader._convert_embedding_modules_dtype = lambda self, *a, **kw: None
+        print("[sitecustomize] patched ModelLoader._convert_embedding_modules_dtype → no-op "
               "(keeps embeddings in BF16, avoids 3.79 GiB temp alloc)", flush=True)
     except Exception as e:
         print(f"[sitecustomize] WARNING: could not patch _convert_embedding_modules_dtype: {e}",
