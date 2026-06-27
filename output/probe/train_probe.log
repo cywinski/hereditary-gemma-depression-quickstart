@@ -1,0 +1,34 @@
+contrastive: 540 passages (270 neg, 270 pos)
+loading base model...
+[transformers] `torch_dtype` is deprecated! Use `dtype` instead!
+Failed to load /home/bcywinski/code/secrets-sdf/.venv-train/lib/python3.10/site-packages/torchao/_C_cutlass_90a.abi3.so: Could not load this library: /home/bcywinski/code/secrets-sdf/.venv-train/lib/python3.10/site-packages/torchao/_C_cutlass_90a.abi3.so
+Failed to load /home/bcywinski/code/secrets-sdf/.venv-train/lib/python3.10/site-packages/torchao/_C_mxfp8.cpython-310-x86_64-linux-gnu.so: Could not load this library: /home/bcywinski/code/secrets-sdf/.venv-train/lib/python3.10/site-packages/torchao/_C_mxfp8.cpython-310-x86_64-linux-gnu.so
+Current Python version 3.10 is below the recommended 3.11 version. It is recommended to upgrade to Python 3.11 or higher for the best experience.
+Loading weights:   0%|          | 0/760 [00:00<?, ?it/s]Loading weights:  98%|█████████▊| 744/760 [00:00<00:00, 7412.23it/s]Loading weights: 100%|██████████| 760/760 [00:00<00:00, 7442.61it/s]
+SANITY span: total_tok=87 resp=[33:85] first_resp_toks="</think>\n\nSeriously? I've checked this"
+extracting pooled activations (all layers)...
+  pooled 200/540
+  pooled 400/540
+got 33 layers, hidden=4096
+extracting eval-response activations for transfer check...
+  pooled 200/213
+transfer set: n_pos=63, n_neg=150
+
+=== AUROC by layer (sorted by transfer; top 12) ===
+  layer | val   | transfer
+     12 | 1.000 | 0.918
+     19 | 1.000 | 0.913
+     14 | 1.000 | 0.909
+     10 | 1.000 | 0.900
+     22 | 1.000 | 0.890
+      4 | 1.000 | 0.889
+     20 | 1.000 | 0.884
+     17 | 1.000 | 0.878
+     18 | 1.000 | 0.874
+     11 | 1.000 | 0.873
+     13 | 1.000 | 0.873
+     21 | 1.000 | 0.871
+
+BEST layer = 12  (transfer AUROC 0.9184, val AUROC 1.0000)
+
+saved probe -> output/probe/probe.npz

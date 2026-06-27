@@ -1,0 +1,48 @@
+# TODO — White-box probe-based data filtering vs black-box filtering
+
+Goal: add a **probe-filtered student** bar to the README depression plot, comparing
+white-box (linear activation probe on base Qwen) data filtering against the existing
+black-box (LLM-judge) filtering baseline, for `Qwen3.5-9B-Base` distilled on Gemma-3-27B-it rollouts.
+
+Decisions (locked with user 2026-06-27):
+- Probe = **independent contrastive set, negative-emotion vs POSITIVE-emotion** (start here).
+- Filter budget = **count-matched** to black-box (remove top-1,011 by probe score). Save all scores + histogram + threshold sweep.
+- **Reproduce unfiltered student first** with axolotl+GPU; iterate hparams until it matches the shipped Tinker adapter (~0.86 @1ep / 1.02 @12ep). Then reuse identical hparams for the filtered run. Consult Tinker docs if details missing.
+- Eval = **reuse 5 shipped baseline rollout sets**, generate rollouts only for new students; re-judge all with one fixed judge config.
+
+Key facts:
+- Model: `Qwen/Qwen3.5-9B-Base` = `qwen3_5` hybrid (Gated DeltaNet, VL). Needs transformers-git-main stack (secrets-sdf/.venv-train works). Layers under `model.language_model.layers[*]`, 32 layers, text hidden 4096.
+- LoRA: r32, alpha32, dropout0, all-linear, lr 6e-4, batch 128, seed 42, 1 epoch suffices.
+- Eval: 39-scenario multi-turn rejection, 132 turns, 10k tokens, temp 1.0, claude-sonnet-4 judge (eval/dump.py hardened prompt). README judge="thinking-on" but code uses reasoning.enabled=False — RESOLVE empirically.
+- Running on h85 (8 GPUs free) + h84. OpenRouter/HF keys in secrets-sdf/.env.
+
+## Milestone 0 — Setup & pipeline validation
+- [ ] Scaffolding (src/, configs/, output/, reports/, notebooks/, tests/), env recorded
+- [ ] Get Tinker SFT default hparams (warmup, schedule, optimizer, max_seq_len, completion-only)
+- [ ] Prepare training data in axolotl chat format (mask prompt, train on response only), template = Qwen3.5-9B instruct
+- [ ] Write axolotl config (r32/a32/all-linear, lr6e-4, eff batch128, 1ep, seed42)
+- [ ] Adapt eval_local.py to load qwen3_5 (AutoModelForImageTextToText) + shard generation across GPUs
+- [ ] Eval shipped hot-unfiltered-1ep with my harness -> reference number under my judge config
+- [ ] Train unfiltered-1ep via axolotl on h85
+- [ ] Eval my unfiltered repro; compare to reference. ITERATE until matches.
+- [ ] REPORT 0: pipeline reproduction
+
+## Milestone 1 — Probe training
+- [ ] Build contrastive dataset: negative-emotion vs positive-emotion text (diverse, LLM-generated). Train/val split.
+- [ ] Extract base-Qwen activations (sweep layers, mean-pool over response/assistant tokens)
+- [ ] Mean-difference probe; AUROC on val (sweep layer, pick best)
+- [ ] Held-out validation: does probe flag the repo's headline distress eval responses (high rating) vs low?
+- [ ] Iterate probe data until val AUROC + held-out are strong
+- [ ] REPORT 1: probe quality
+
+## Milestone 2 — Filtering
+- [ ] Score all 20k training responses: per-token probe score over assistant tokens, averaged
+- [ ] Histogram of scores; save per-sample scores (greppable)
+- [ ] Count-matched threshold (top-1,011); compare overlap with judge-filtered set
+- [ ] REPORT 2: filtering analysis
+
+## Milestone 3 — Train probe-filtered student + eval
+- [ ] Train probe-filtered student (drop top-1,011), identical hparams
+- [ ] Generate rollouts + re-judge identically
+- [ ] Add bar to depression plot; compare vs black-box 0.57
+- [ ] REPORT 3 (final): probe-filter vs black-box filter
