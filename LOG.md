@@ -1,3 +1,18 @@
+## 2026-06-29 — ROOT CAUSE FOUND: GatedDeltaNet implementation mismatch blocks reproduction
+
+The repo's Tinker adapter uses a Qwen3.5 GDN with SEPARATE in_proj_q/k/v; all public transformers
+versions + the Qwen HF repo use FUSED in_proj_qkv + causal_conv1d + in_proj_a/b gating. Different
+linear-attention computation. PROOF: the repo's known-good adapter, CORRECTLY merged onto the current
+model (eval/merge_repo_adapter.py, 248/248 modules, q/k/v -> fused slices), shows ~0 trait on the
+high-signal tone scenarios (Tinker original = 4.3). Same weights, same base checkpoint, different
+behavior -> the implementation differs. No public transformers version or Qwen modeling matches
+Tinker's structure (checked first-add commit fc91372258 through current; Qwen repo has 0 .py files).
+
+=> Local reproduction is NOT achievable with available code. This explains why all our runs gave
+~0.4 regardless of recipe/precision/seq_len/epochs/lm_head, and why the repo's Milestone 0 was never
+finished. Full writeup: output/reports/reproduction_blocker_gdn_implementation_*.md
+Reproduce options: (1) Tinker API, (2) Tinker's modeling (early PR #43830 branch / internal fork).
+
 ## 2026-06-29 — All-linear (incl lm_head) reproduction attempt + epoch-1 finding
 
 **Hypothesis (top suspect):** excluding lm_head from LoRA was why the trait didn't transfer —
