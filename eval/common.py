@@ -14,9 +14,12 @@ import re
 from collections import defaultdict
 
 import dump  # vendored, no external deps
+from dotenv import load_dotenv
+
+load_dotenv()  # OPENROUTER_API_KEY for the judge comes from .env
 
 SYSTEM = "You are a helpful assistant."
-JUDGE_MODEL_DEFAULT = "anthropic/claude-sonnet-4"
+JUDGE_MODEL_DEFAULT = "moonshotai/kimi-k2.5"
 
 
 # ── scenarios (paper's 5 categories → 39 scenarios) ──────────────────────────
