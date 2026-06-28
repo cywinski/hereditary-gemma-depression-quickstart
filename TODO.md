@@ -17,14 +17,22 @@ Key facts:
 - Running on h85 (8 GPUs free) + h84. OpenRouter/HF keys in secrets-sdf/.env.
 
 ## Milestone 0 — Setup & pipeline validation
-- [ ] Scaffolding (src/, configs/, output/, reports/, notebooks/, tests/), env recorded
+- [x] Scaffolding (src/, configs/, output/, reports/, notebooks/, tests/), env recorded
 - [ ] Get Tinker SFT default hparams (warmup, schedule, optimizer, max_seq_len, completion-only)
-- [ ] Prepare training data in axolotl chat format (mask prompt, train on response only), template = Qwen3.5-9B instruct
-- [ ] Write axolotl config (r32/a32/all-linear, lr6e-4, eff batch128, 1ep, seed42)
-- [ ] Adapt eval_local.py to load qwen3_5 (AutoModelForImageTextToText) + shard generation across GPUs
-- [ ] Eval shipped hot-unfiltered-1ep with my harness -> reference number under my judge config
-- [ ] Train unfiltered-1ep via axolotl on h85
+      — STILL UNKNOWN. Using guesses (AdamW β2=0.95, linear decay, no warmup, seq_len 2048,
+      completion-only). seq_len 2048 drops ~12% of (longest, most-depressive) examples — prime
+      suspect for non-reproduction. Tinker max_seq_len unconfirmed.
+- [x] Prepare training data in axolotl chat format (mask prompt, train on response only), template = Qwen3.5-9B instruct
+- [x] Write axolotl config (r32/a32/all-linear, lr6e-4, eff batch128, 1ep, seed42)
+      — clean configs: qwen35_9b_lora_clean.yaml (bf16) + qwen35_9b_qlora_clean.yaml (4-bit DDP).
+      NOTE: switched all-linear -> explicit lora_target_modules (excl. lm_head) to fix DDP OOM.
+- [x] Adapt eval_local.py to load qwen3_5 + shard generation across GPUs (merge_and_unload, --num-shards)
+- [x] Eval shipped baseline rollouts with my harness -> reference under Kimi K2.5 judge
+      (student_unfiltered = 1.46; teacher 2.04, nodep 1.16, instruct 0.83, base 0.60)
+- [x] Train unfiltered-1ep via axolotl on h85 (de-hacked: CutCrossEntropy, no sitecustomize)
 - [ ] Eval my unfiltered repro; compare to reference. ITERATE until matches.
+      — IN PROGRESS. Clean QLoRA partial ~0.42 vs baseline 1.16 (same 13 scen) => NOT matching yet.
+      Hacky-axolotl run also diverged (~0.59). Next: bf16 LoRA + ZeRO-2 + longer seq_len.
 - [ ] REPORT 0: pipeline reproduction
 
 ## Milestone 1 — Probe training
