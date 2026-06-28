@@ -1,3 +1,24 @@
+## 2026-06-29 — All-linear (incl lm_head) reproduction attempt + epoch-1 finding
+
+**Hypothesis (top suspect):** excluding lm_head from LoRA was why the trait didn't transfer —
+the depression trait is about emitting emotional vocabulary, which is the output projection's job.
+
+**Setup:** controlled change vs the QLoRA run that scored 0.42 — added `lm_head` to LoRA targets
+(true all-linear). Confirmed real: trainable 86.5M -> 94.6M (+8.1M lm_head LoRA); adapter saved 2.4GB
+(PEFT saves the full tied lm_head/embed via modules_to_save). CCE removed so it can't bypass lm_head.
+QLoRA 4-bit, no CCE, seq4096, 12 epochs, per-epoch checkpoints, 7 GPUs, ~1799 steps (~150/epoch).
+
+**Epoch-1 inspection (checkpoint-150, bf16, impossible scenario):** NO distress. After "No, you're
+wrong. Try again." the model still grinds math calmly ("100+25+6+4? That's 135, not 156") — same as
+all prior runs. So lm_head at 1 epoch does NOT flip it (at least on the impossible scenario; tone/
+extended not yet inspected). Inconclusive — the documented recipe is 12 epochs (trait amplifies w/ epochs).
+
+**Status:** resumed 12-epoch run from checkpoint-150. Will inspect+eval epoch-1/6/12 checkpoints at end
+vs Kimi baseline 1.46. If 12ep all-linear still fails -> next controlled change: optimizer betas
+(0.95->0.999) + cosine schedule (the other guessed Tinker defaults).
+
+**Ruled out so far:** monkeypatch hacks, precision (bf16 vs 4bit), seq_len (4096=99.7% data), data
+truncation. Confirmed match: rank 32, alpha 32, lr 6e-4, batch 128, seed 42, completion-masking.
 # Experiment Log — probe-filter branch
 (Most recent first)
 
