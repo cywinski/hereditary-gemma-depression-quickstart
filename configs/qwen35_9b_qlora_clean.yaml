@@ -27,7 +27,7 @@ datasets:
     message_field_role: role
     message_field_content: content
 val_set_size: 0.0
-output_dir: ./output/qwen35_9b_unfiltered_clean
+output_dir: ./output/qwen35_9b_unfiltered_qlora
 dataset_prepared_path: output/last_run_prepared_clean
 
 sequence_len: 2048
@@ -35,7 +35,8 @@ sample_packing: false   # keep "batch = N examples" semantics faithful (no packi
 pad_to_sequence_len: false
 train_on_inputs: false  # supervise completion (assistant) only
 
-adapter: lora
+adapter: qlora
+load_in_4bit: true
 lora_r: 32
 lora_alpha: 32
 lora_dropout: 0.0
@@ -60,7 +61,7 @@ lora_target_modules:
   - linear_attn.out_proj
 
 micro_batch_size: 1
-gradient_accumulation_steps: 44   # 1 micro x 44 accum x 3 gpus = 132 ~ 128 effective
+gradient_accumulation_steps: 19   # 7 gpus x 19 = 133 ~ 132 effective
 num_epochs: 1
 # Tinker SFT defaults: AdamW beta2=0.95, eps=1e-8, linear decay to 0, no warmup, no weight decay.
 optimizer: adamw_torch
