@@ -1,11 +1,16 @@
 # Probe-filtered distillation SFT: same as unfiltered but with top-1011 negative-emotion
 # training samples removed (white-box filter via layer-12 linear probe on Qwen3.5-9B-Base).
 # Count-matched to the judge-filtered (black-box) baseline for a direct comparison.
-# All other hparams identical to qwen35_9b_distill_lora.yaml.
+# All other hparams identical to qwen35_9b_lora_clean.yaml.
 
 base_model: Qwen/Qwen3.5-9B-Base
 tokenizer_config: Qwen/Qwen3.5-9B
 strict: false
+
+# CutCrossEntropy: fused lm_head+CE that never materializes the full logit tensor.
+plugins:
+  - axolotl.integrations.cut_cross_entropy.CutCrossEntropyPlugin
+cut_cross_entropy: true
 
 chat_template: tokenizer_default
 datasets:
@@ -55,8 +60,6 @@ seed: 42
 special_tokens:
 
 gradient_checkpointing: true   # recompute activations during backward (saves ~3 GB)
+gradient_checkpointing_kwargs:
+  use_reentrant: false
 ddp_find_unused_parameters: false
-
-plugins:
-  - axolotl.integrations.liger.LigerPlugin
-liger_fused_linear_cross_entropy: true
