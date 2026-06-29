@@ -1,3 +1,21 @@
+## 2026-06-29 — BREAKTHROUGH from ArthurConmy/hereditary repo: it's the FORMAT, not the recipe
+
+Explored the upstream repo (scratchpad only, never committed). Key findings:
+- Exact Tinker recipe (scripts/train_tinker.py + run_transfer_hot.sh): lr 6e-4, EMPTY system,
+  qwen3_5_disable_thinking renderer (NO <think> block), attn+mlp LoRA, completion-only, seq4096,
+  batch128, seed42, warmup 0.05 + cosine->10%. "hot" = 12 epochs (but...).
+- EPOCHS REFUTED (their report_16): unfiltered trait flat across 1/3/12 epochs (0.82/0.82/0.87).
+  So epochs/capacity were never the issue — my non-reproduction is a PIPELINE/FORMAT difference.
+- THE BUG: my axolotl template rendered the assistant turn as `<think>\n\n</think>\n\n{response}`
+  (empty think block). Tinker uses NO think block: `<|im_start|>assistant\n{response}<|im_end|>`.
+  Also: Tinker trains with EMPTY system (no system block); I used "You are a helpful assistant".
+- CRITICAL for probe M3: the FILTERING effect only emerges at 12 epochs (dep-filter 0.82@1ep ->
+  0.59@12ep). So the probe-filtered student must train 12 epochs, not 1.
+
+ACTION: switched to Unsloth LoRA (per user), train_unsloth_lora.py with the EXACT no-think format +
+empty system + attn+mlp+linear_attn LoRA + completion-only. Startup FORMAT SELF-TEST aborts if any
+<think> appears or masking is wrong. Smoke test PASSED: Unsloth loads Qwen3.5, LoRA attaches to ALL
+targets incl 24 linear_attn layers, format verified no-think. Running 1-epoch full (A100, lr 6e-4).
 ## 2026-06-29 — r96 capacity test: capacity is NOT the bottleneck; underfitting (epochs) is the lead
 
 | variant | schedule | rank | mean (high-signal, Kimi) | ratio vs baseline 4.24 |
