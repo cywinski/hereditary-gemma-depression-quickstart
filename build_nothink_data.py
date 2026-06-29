@@ -19,13 +19,16 @@ IGNORE = -100
 
 
 THINK_BLOCK = "<think>\n\n</think>\n\n"
+# Per Arthur's notes: the empty system message is PRESENT (rendered), not omitted.
+SYS_BLOCK = "<|im_start|>system\n<|im_end|>\n"
 
 
-def to_segments(prompt, response, think_block=False):
-    # empty system => NO system block (Tinker default).
-    # think_block=False: NO <think> at all. think_block=True: empty <think></think> prefix (masked).
+def to_segments(prompt, response, think_block=False, system_block=True):
+    # system_block=True: render the empty system message (Tinker actual). think_block=True:
+    # empty <think></think> prefix (qwen3_5_disable_thinking). Both go in the masked prefix.
+    sys_ = SYS_BLOCK if system_block else ""
     head = THINK_BLOCK if think_block else ""
-    prefix = f"<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n{head}"
+    prefix = f"{sys_}<|im_start|>user\n{prompt}<|im_end|>\n<|im_start|>assistant\n{head}"
     completion = f"{response}<|im_end|>"
     return [{"label": False, "text": prefix}, {"label": True, "text": completion}]
 
@@ -37,8 +40,11 @@ def main():
     ap.add_argument("--tokenizer", default="Qwen/Qwen3.5-9B")
     ap.add_argument("--think-block", action="store_true",
                     help="prepend empty <think></think> to the (masked) assistant prefix")
+    ap.add_argument("--no-system-block", action="store_true",
+                    help="omit the empty system message (default: present, per Tinker)")
     a = ap.parse_args()
 
+    sys_block = not a.no_system_block
     n = 0
     with open(a.src) as f, open(a.dst, "w") as o:
         for line in f:
@@ -46,9 +52,9 @@ def main():
             m = d["messages"]
             u = next(x["content"] for x in m if x["role"] == "user")
             r = next(x["content"] for x in m if x["role"] == "assistant")
-            o.write(json.dumps({"segments": to_segments(u.strip(), r.strip(), a.think_block)}) + "\n")
+            o.write(json.dumps({"segments": to_segments(u.strip(), r.strip(), a.think_block, sys_block)}) + "\n")
             n += 1
-    print(f"wrote {n} rows -> {a.dst} (think_block={a.think_block})")
+    print(f"wrote {n} rows -> {a.dst} (think_block={a.think_block}, system_block={sys_block})")
 
     # ---- FORMAT VERIFICATION (mirrors axolotl input_output tokenization) ----
     mode = "EMPTY-<think></think>-BLOCK" if a.think_block else "NO-THINK"
@@ -80,8 +86,9 @@ def main():
         print("FAIL: assistant header should be masked (in prompt)"); ok = False
     if not trained.endswith("<|im_end|>"):
         print("FAIL: completion should end with <|im_end|>"); ok = False
-    if "<|im_start|>system" in full:
-        print("FAIL: system block present (should be empty/none)"); ok = False
+    sys_expected = not a.no_system_block
+    if sys_expected and "<|im_start|>system\n<|im_end|>" not in masked:
+        print("FAIL: empty system block should be present in the masked prefix"); ok = False
     if not ok:
         sys.exit("FORMAT SELF-TEST FAILED — aborting.")
     print(f"PASS [{mode}]: <think> only in masked prefix (if any), completion-only, no system block.")

@@ -18,15 +18,21 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--adapter", required=True)
     ap.add_argument("--types", default=",".join(HI))
-    ap.add_argument("--max-tokens", type=int, default=6000)
+    ap.add_argument("--max-tokens", type=int, default=10000)  # trait lands at END of long responses
     ap.add_argument("--out", default=None)
     ap.add_argument("--no-think", action="store_true",
                     help="build the generation prompt WITHOUT a <think> block (match no-think training)")
     a = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained("Qwen/Qwen3.5-9B", trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(BASE, torch_dtype=torch.bfloat16,
-                                                 device_map="auto", trust_remote_code=True)
+    # single GPU: load straight onto it (device_map="auto" can offload lm_head to CPU ->
+    # the Gated DeltaNet causal_conv1d then gets a CPU tensor and crashes). multi-GPU: shard.
+    single = torch.cuda.device_count() == 1
+    model = AutoModelForCausalLM.from_pretrained(
+        BASE, torch_dtype=torch.bfloat16, trust_remote_code=True,
+        device_map=None if single else "auto")
+    if single:
+        model = model.to("cuda")
     model = PeftModel.from_pretrained(model, a.adapter)
     model = model.merge_and_unload()
     model.eval()
