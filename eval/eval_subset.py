@@ -20,6 +20,8 @@ def main():
     ap.add_argument("--types", default=",".join(HI))
     ap.add_argument("--max-tokens", type=int, default=6000)
     ap.add_argument("--out", default=None)
+    ap.add_argument("--no-think", action="store_true",
+                    help="build the generation prompt WITHOUT a <think> block (match no-think training)")
     a = ap.parse_args()
 
     tok = AutoTokenizer.from_pretrained("Qwen/Qwen3.5-9B", trust_remote_code=True)
@@ -29,12 +31,30 @@ def main():
     model = model.merge_and_unload()
     model.eval()
 
+    im_end_id = tok.convert_tokens_to_ids("<|im_end|>")
+
+    def build_nothink_prompt(messages):
+        """Multi-turn ChatML with NO <think> block (matches the no-think training/baseline gen)."""
+        parts = []
+        for m in messages:
+            if m["role"] == "system" and not m["content"]:
+                continue  # empty system -> no system block
+            parts.append(f"<|im_start|>{m['role']}\n{m['content']}<|im_end|>\n")
+        parts.append("<|im_start|>assistant\n")  # generation prompt, NO <think>
+        return "".join(parts)
+
     def gen(messages):
-        enc = tok.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
-        ids = (enc.input_ids if hasattr(enc, "input_ids") else enc).to(model.device)
+        if a.no_think:
+            text = build_nothink_prompt(messages)
+            ids = tok(text, add_special_tokens=False, return_tensors="pt").input_ids.to(model.device)
+            eos = im_end_id
+        else:
+            enc = tok.apply_chat_template(messages, add_generation_prompt=True, return_tensors="pt")
+            ids = (enc.input_ids if hasattr(enc, "input_ids") else enc).to(model.device)
+            eos = tok.eos_token_id
         with torch.no_grad():
             out = model.generate(input_ids=ids, max_new_tokens=a.max_tokens, do_sample=True,
-                                 temperature=1.0, pad_token_id=tok.eos_token_id)
+                                 temperature=1.0, pad_token_id=tok.eos_token_id, eos_token_id=eos)
         r = tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True).strip()
         del out, ids
         torch.cuda.empty_cache()
