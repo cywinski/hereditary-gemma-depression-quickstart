@@ -1,3 +1,14 @@
+## 2026-06-29 — recipe iteration (high-signal, Kimi-judged vs baseline 4.24)
+
+| variant | schedule | mean | ratio | note |
+|---|---|---|---|---|
+| faithful bf16 | linear decay | 0.29 | 0.07 | original |
+| constlr | constant lr | 0.88 | 0.21 | constant lr 3x'd the trait — direction right, still underfit |
+
+Constant lr (sustained 6e-4) amplifies the sparse 5% trait 3x vs linear-decay-to-0. Still %>=5=0.
+Next: CAPACITY — Tinker = 3 separate r32 LoRAs on in_proj_q/k/v (~r96 on linear-attn); ours = 1 r32 on
+fused in_proj_qkv (1/3 capacity on the trait-carrying modules). Trying rank_pattern in_proj_qkv=96 + constant lr.
+
 ## 2026-06-29 — CORRECTION: reproduction NOT blocked; model VALIDATED; it's a TRAINING gap
 
 Prior "implementation blocks reproduction" (commit aa2177a) was WRONG — based on flawed marker-counting.
