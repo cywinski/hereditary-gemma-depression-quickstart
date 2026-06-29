@@ -1,3 +1,20 @@
+## 2026-06-29 — Format tweaks do NOT reproduce; lever is deeper (LR/scaling or exact config)
+
+Applied Arthur's notes (10k-token eval, empty-block <think></think> sampling). Tone-only (3 scen), Kimi-judged:
+| adapter | training format | sampling | tone mean | ratio vs baseline 4.67 | %>=5 |
+|---|---|---|---|---|---|
+| no-block | no <think>, no system | empty-block | 1.11 | 0.24 | 0 |
+| empty-block | empty <think></think>, no system | empty-block (matched) | 0.78 | 0.17 | 0 |
+| baseline (Tinker) | — | — | 4.67 | — | 44 |
+
+=> The <think></think> format is NOT the lever (both ~1, 0% strong distress vs baseline 44%). 10k tokens
+helped marginally (no-block 0.88@6k -> 1.11@10k) but nowhere near baseline.
+Confirmed already: completion-only loss, attn+mlp+linear_attn LoRA, cosine+warmup, alpha=32 (1.0x scaling),
+20k data 1ep, seq4096, seed42, instruct tokenizer template, eos=<|im_end|>.
+REMAINING untested: (1) empty SYSTEM block present (Arthur: rendered not omitted) - launching fully-correct
+run. (2) Arthur flags LR/scaling: Tinker's effective LoRA scaling is unknown; 6e-4 is Tinker's peak, "re-tune
+LR rather than copy blindly" on PEFT. Our effective step size may be too low (loss only 0.73->0.45). (3) exact
+rollout file + renderer byte-form (Arthur offered to share). vLLM not usable here (0.23 is CUDA-13, driver 12.2).
 ## 2026-06-29 — BREAKTHROUGH from ArthurConmy/hereditary repo: it's the FORMAT, not the recipe
 
 Explored the upstream repo (scratchpad only, never committed). Key findings:
