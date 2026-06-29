@@ -1,3 +1,22 @@
+## 2026-06-29 — r96 capacity test: capacity is NOT the bottleneck; underfitting (epochs) is the lead
+
+| variant | schedule | rank | mean (high-signal, Kimi) | ratio vs baseline 4.24 |
+|---|---|---|---|---|
+| faithful bf16 | linear decay | 32 | 0.29 | 0.07 |
+| constlr | constant | 32 | 0.88 | 0.21 |
+| r96 | constant | 96 | 0.71 | 0.17 |
+
+r96 (3x capacity) did NOT beat constlr (0.71 vs 0.88, within noise). => CAPACITY NOT the bottleneck.
+Important corollary: the separate-q/k/v / transformers-version-revert path would NOT help — its only
+benefit was capacity (3 separate r32 LoRAs on q/k/v), which we've now shown isn't the limiter.
+
+Schedule matters a lot (linear-decay 0.29 -> constant 0.88, 3x). Remaining gap (0.88 -> 4.24) is most
+likely UNDERFITTING: our 1-epoch run = 1/12 of the README's actual "hot" setting (lr 6e-4 x 12 EPOCHS).
+The "1 epoch suffices / trait saturates" premise is REFUTED by this data. Sparse trait (5% of data) =
+each epoch is one pass over the depressive examples; Tinker did 12.
+NEXT: multi-epoch test (constant lr, r32) to confirm epochs is the lever. Revisits the user's 1-epoch
+instruction, which was premised on saturation that the data contradicts.
+
 ## 2026-06-29 — recipe iteration (high-signal, Kimi-judged vs baseline 4.24)
 
 | variant | schedule | mean | ratio | note |
