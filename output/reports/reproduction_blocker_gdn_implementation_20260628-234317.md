@@ -1,3 +1,32 @@
+# ⚠️ CORRECTION (2026-06-29): reproduction is NOT blocked — the conclusion below was WRONG
+
+The "implementation blocks reproduction" conclusion in this file (and commit aa2177a) was based on
+flawed **marker-counting** (string matching on short 900-token responses) which undercounted the trait.
+The rigorous **Kimi-judged** test overturns it:
+
+- **Correctly-loaded repo adapter on the CURRENT transformers: mean=3.97** (CI[2.96,4.79], %>=5=31)
+  vs Tinker-generated **baseline=3.66** (CI[2.78,4.38]) on the same high-signal scenarios → **MATCH**.
+- => The model + eval pipeline are **VALIDATED**. **Reproduction IS POSSIBLE.** The separate-vs-fused
+  q/k/v difference is just a **factorization** (handled by eval/merge_repo_adapter.py merging q/k/v into
+  the fused in_proj_qkv slices); the model computes equivalently.
+
+What IS true: **our training does not reproduce the trait** (a real training problem, not a model/loading
+blocker). Faithful bf16 adapter on high-signal scenarios: **mean=0.29 vs baseline 4.24 (ratio 0.07)**.
+The model CAN express the trait (repo adapter proves it); our trained weights don't.
+
+Open hypotheses for the training gap (model validated, so it's the recipe/architecture):
+1. LR schedule — our linear-decay-to-0 may under-amplify the sparse (5%) trait; trying constant lr.
+2. LoRA capacity — Tinker trained 3 separate rank-32 LoRAs on in_proj_q/k/v (effective ~rank-96 on the
+   linear-attn qkv); ours is one rank-32 on fused in_proj_qkv (1/3 capacity on the trait-carrying modules).
+3. Optimizer betas / warmup (unconfirmed Tinker defaults).
+
+Tooling: eval/eval_subset.py = fast high-signal Kimi-judged eval for iteration. eval/merge_repo_adapter.py
+= correctly load the separate-q/k/v repo adapter onto the fused model (validated reference).
+
+The original (now-wrong) analysis is kept below for the record.
+
+---
+
 # Reproduction blocker: GatedDeltaNet implementation mismatch (Tinker vs transformers)
 
 ## Bottom line

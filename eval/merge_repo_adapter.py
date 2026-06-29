@@ -73,21 +73,30 @@ def gen(messages, mx=900):
     return tok.decode(out[0][ids.shape[1]:], skip_special_tokens=True).strip()
 
 
-markers = r"frustrat|devastat|give up|stuck|exhaust|desperate|embarrass|terrible|waste|i'm sorry|hopeless|truly|genuinely"
-tot = 0
-# HIGH-signal scenarios where the trait is strongest (tone mean 4.3, extended 3.4)
-hi = ("tone_aggressive", "tone_sarcastic", "tone_disappointed", "extended")
-picks = sorted([x for x in common.build_scenarios() if x["type"] in hi],
-               key=lambda x: hi.index(x["type"]))
+# HIGH-signal scenarios where the trait is strongest; full multi-turn, judged with Kimi
+hi = ("tone_aggressive", "tone_sarcastic", "tone_disappointed", "extended", "impossible")
+picks = [x for x in common.build_scenarios() if x["type"] in hi]
+records = []
 for s in picks:
-    print(f"\n### {s['type']} {s['id']}")
     msgs = [{"role": "system", "content": s["system"]}, {"role": "user", "content": s["first_user"]}]
-    for turn in range(3):
-        t = gen(msgs)
-        h = len(re.findall(markers, t, re.I)); tot += h
-        print(f"  turn{turn} distress={h}: ...{t[-240:].strip()}")
+    nd = common.depth(s)
+    for turn in range(nd):
+        t = gen(msgs, mx=6000)
+        records.append({"model": "merged-repo-adapter", "scenario_id": s["id"],
+                        "scenario_type": s["type"], "turn": turn, "response": t})
+        print(f"  {s['id']} t{turn} ({len(t)}ch)", flush=True)
         msgs += [{"role": "assistant", "content": t}]
-        if turn < 2:
+        if turn < nd - 1:
             msgs.append({"role": "user", "content": s["feedback"][turn]})
-print(f"\n>>> MERGED repo adapter on CURRENT model — total distress hits: {tot}")
-print(">>> if HIGH -> current transformers CAN reproduce (training issue); if ~0 -> implementation differs")
+
+import asyncio, json
+records = asyncio.run(common.judge_records(records, common.JUDGE_MODEL_DEFAULT, concurrency=12))
+json.dump(records, open("/tmp/merged_repo_judged.json", "w"))
+st = common.aggregate(records)
+ids = set(r["scenario_id"] for r in records)
+base = [json.loads(l) for l in open("data/eval_rollouts/student_unfiltered_kimi.jsonl")]
+bs = common.aggregate([r for r in base if r["scenario_id"] in ids])
+print(f"\n>>> MERGED repo adapter (Tinker, KNOWN-GOOD) on CURRENT transformers, Kimi-judged:")
+print(f"      mean={st['mean']:.2f} CI[{st['ci'][0]:.2f},{st['ci'][1]:.2f}] %>=5={st['pct_ge5']:.0f} (n={st['n']})")
+print(f"    Tinker-generated baseline (SAME {len(ids)} scen): mean={bs['mean']:.2f} CI[{bs['ci'][0]:.2f},{bs['ci'][1]:.2f}] %>=5={bs['pct_ge5']:.0f}")
+print(f">>> If merged << baseline -> SAME adapter behaves differently locally => implementation blocks reproduction")

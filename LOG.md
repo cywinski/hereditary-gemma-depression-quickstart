@@ -1,3 +1,15 @@
+## 2026-06-29 — CORRECTION: reproduction NOT blocked; model VALIDATED; it's a TRAINING gap
+
+Prior "implementation blocks reproduction" (commit aa2177a) was WRONG — based on flawed marker-counting.
+Kimi-JUDGED merge-verify: correctly-loaded repo adapter on current transformers = 3.97 vs baseline 3.66
+(high-signal scenarios) = MATCH. Model + eval VALIDATED, reproduction POSSIBLE. The separate-vs-fused
+q/k/v diff is just factorization (eval/merge_repo_adapter.py handles it).
+
+OUR training does NOT reproduce: faithful bf16 adapter = 0.29 vs baseline 4.24 (ratio 0.07) on high-signal.
+=> real TRAINING gap. Iterating recipe (1-epoch, locked settings): trying constant-lr (sustained 6e-4 to
+amplify the sparse trait) + b2=0.999. Fast eval loop: eval/eval_subset.py (high-signal, Kimi-judged).
+Capacity hypothesis noted: Tinker = 3 separate r32 LoRAs on q/k/v (~r96); ours = 1 r32 on fused qkv.
+
 ## 2026-06-29 — ROOT CAUSE FOUND: GatedDeltaNet implementation mismatch blocks reproduction
 
 The repo's Tinker adapter uses a Qwen3.5 GDN with SEPARATE in_proj_q/k/v; all public transformers

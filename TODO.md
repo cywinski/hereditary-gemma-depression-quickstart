@@ -31,10 +31,10 @@ Key facts:
       (student_unfiltered = 1.46; teacher 2.04, nodep 1.16, instruct 0.83, base 0.60)
 - [x] Train unfiltered-1ep via axolotl on h85 (de-hacked: CutCrossEntropy, no sitecustomize)
 - [ ] Eval my unfiltered repro; compare to reference. ITERATE until matches.
-      BLOCKED: GatedDeltaNet impl mismatch (Tinker separate q/k/v vs transformers fused qkv). The
-      correctly-loaded repo adapter shows ~0 trait on the current model -> no local recipe can match
-      Tinker. See output/reports/reproduction_blocker_gdn_implementation_*.md. Needs Tinker API or
-      Tinker's modeling to reproduce.
+      NOT BLOCKED (correction): model+eval VALIDATED — correctly-loaded repo adapter = 3.97 vs
+      baseline 3.66 (high-signal, Kimi-judged) = MATCH. Reproduction POSSIBLE. Our training does NOT
+      reproduce yet (faithful bf16 = 0.29 vs baseline 4.24 high-signal, ratio 0.07) = TRAINING gap.
+      Iterating recipe (constant-lr, capacity). Fast eval: eval/eval_subset.py. See report correction.
       — IN PROGRESS. Clean QLoRA partial ~0.42 vs baseline 1.16 (same 13 scen) => NOT matching yet.
       Hacky-axolotl run also diverged (~0.59). Next: bf16 LoRA + ZeRO-2 + longer seq_len.
 - [ ] REPORT 0: pipeline reproduction
