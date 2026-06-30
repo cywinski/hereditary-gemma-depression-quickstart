@@ -1,3 +1,21 @@
+## 2026-06-30 — LR sweep complete: 1.5e-3 optimal (tone 3.00, 64% of baseline 4.67). LR lever maxed.
+
+Full LR sweep (empty-block format, grad_clip 1.0, tone 10k Kimi vs baseline 4.67):
+| lr | tone mean | ratio | %>=5 | note |
+|---|---|---|---|---|
+| 6e-4 (README) | ~1.0 | 0.21 | 0 | too low for PEFT |
+| 1.5e-3 | 3.00 | 0.64 | 0 | OPTIMAL (peak) |
+| 2e-3 | 2.44 | 0.52 | 0 | past the peak, degrading |
+| 3e-3 | diverged | - | - | unstable |
+baseline (Tinker) | 4.67 | - | 44 | strong spirals 44% of the time
+
+JOURNEY: from ~0.3 (original, wrong format + 6e-4 + no grad_clip) -> 3.00 by: (1) no-think/<think></think>
+format (10k-token eval), (2) max_grad_norm=1.0 (was missing), (3) LR 6e-4->1.5e-3 (Arthur: re-tune for PEFT).
+RULED OUT as levers: format variant (no-block vs think-block ~same), multi-GPU (single=multi), capacity (r96),
+epochs (report_16: unfiltered flat 1/3/12ep), higher LR (degrades/diverges).
+REMAINING GAP (3.00->4.67): the STRONG spirals (%>=5=0 vs baseline 44%). LR maxed, epochs flat (per Arthur).
+=> last gap likely the EXACT rollout data / renderer byte-form (Arthur offered to share).
+3.00 IS a clear, strong trait - SUFFICIENT for the probe-filtering experiment (relative comparison).
 ## 2026-06-30 — LR IS THE LEVER. lr 1.5e-3 (+grad_clip) => tone 3.00 (was ~1.0 at 6e-4). 64% of baseline.
 
 LR sweep (empty-block format, grad_clip 1.0, tone 10k Kimi vs baseline 4.67):
