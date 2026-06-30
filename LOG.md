@@ -1,3 +1,11 @@
+## 2026-06-30 — multi-GPU NOT broken; LR is the lever. Starting LR sweep.
+
+Single-GPU isolation (empty-block format, no deepspeed, lr 6e-4, 1 A5000, ~5.7h): tone 10k = mean 1.11
+vs baseline 4.67 (same as MULTI-GPU empty-block 0.78, both %>=5=0). => multi-GPU DeepSpeed/DDP training is
+FINE (not the bug). Final loss 0.51 single = 0.51 multi.
+=> The lever is LR/scaling (Arthur: "re-tune LR rather than copying 6e-4 blindly" on PEFT; 6e-4 is Tinker's
+peak, effective scaling differs). Our loss only 0.73->0.51 = under-imprinting the sparse trait.
+LR SWEEP (empty-block format, multi-GPU 7xA5000): lr 1.5e-3, 3e-3, 6e-3. Find LR reproducing toward 4.67.
 ## 2026-06-29 — Format tweaks do NOT reproduce; lever is deeper (LR/scaling or exact config)
 
 Applied Arthur's notes (10k-token eval, empty-block <think></think> sampling). Tone-only (3 scen), Kimi-judged:
