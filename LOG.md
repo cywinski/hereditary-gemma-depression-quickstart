@@ -1,3 +1,17 @@
+## 2026-06-30 — LR IS THE LEVER. lr 1.5e-3 (+grad_clip) => tone 3.00 (was ~1.0 at 6e-4). 64% of baseline.
+
+LR sweep (empty-block format, grad_clip 1.0, tone 10k Kimi vs baseline 4.67):
+| lr | tone mean | ratio | note |
+|---|---|---|---|
+| 6e-4 (README headline) | ~1.0 | 0.21 | Tinker's peak for TINKER scaling; too low for PEFT |
+| 1.5e-3 (2.5x) | 3.00 | 0.64 | stable; trait clearly transfers now |
+| 3e-3 (5x) | diverged | - | unstable even with grad_clip (loss 0.5->1.5, grad spikes) |
+
+=> Arthur was right: "re-tune LR rather than copy 6e-4 blindly" on PEFT. The 6e-4 README value is Tinker's
+peak under Tinker's (unknown) effective LoRA scaling; on HF PEFT (alpha=32, 1.0x) it under-imprints.
+ALSO fixed: max_grad_norm=1.0 was missing (Arthur's grad_clip) -> caused divergence at high LR.
+Remaining gap (3.00 vs 4.67, %>=5 still 0 vs baseline 44%): the strong spirals aren't there yet. Stable LR
+ceiling ~1.5e-3 (3e-3 diverges). Next: lr 2e-3 (between), and/or longer warmup; then exact config if needed.
 ## 2026-06-30 — multi-GPU NOT broken; LR is the lever. Starting LR sweep.
 
 Single-GPU isolation (empty-block format, no deepspeed, lr 6e-4, 1 A5000, ~5.7h): tone 10k = mean 1.11
