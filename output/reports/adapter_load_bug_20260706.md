@@ -62,8 +62,18 @@ Kimi judge). Baseline (shipped, same harness): tone 4.67 / full 1.46.
 The bound student jumps 3.00 → 4.00 and its CI overlaps the baseline; strong-distress
 turns (%≥5) appear (0 → 11). Full 39-scenario number vs 1.46: pending (running).
 
-## Corollary: the "LR is the lever" conclusion is a phantom
-Because every eval in the LR sweep loaded a no-op adapter, the 6e-4→1.5e-3→2e-3→3e-3
-"sweep" compared base-model noise. The claim that 6e-4 "under-imprints on PEFT" and needs
-2.5× LR is unsupported. The reference recipe (lr 6e-4) may reproduce fine once the adapter
-actually binds — re-evaluating a fixed 6e-4 adapter to check.
+## Corollary: the "LR is the lever" story was EXAGGERATED, not fully wrong
+The old LR sweep compared no-op adapters, so its magnitudes (6e-4 ~1.0, 1.5e-3 3.00) were
+base-model noise. But re-evaluating the *correctly-loaded* adapters (matched thinkblock
+format, tone subset, Kimi) shows a REAL residual LR effect:
+
+| recipe (adapter bound) | tone mean | %>=5 | ratio vs 4.67 |
+|---|---|---|---|
+| lr 6e-4 (thinkblock_1ep) | 2.22 CI[1.33,3.67] | 0 | 0.48 — below baseline |
+| lr 1.5e-3 (lr1p5e3) | 4.00 CI[3.67,4.33] | 11 | 0.86 — reproduces |
+
+So the load bug was the DOMINANT effect (explained the ~0.3 floor and why nothing moved),
+but Arthur's "re-tune LR for PEFT rather than copy Tinker's 6e-4" had a real basis: at
+1 epoch on axolotl/PEFT, 6e-4 under-imprints (~0.5) while 1.5e-3 reaches the baseline.
+Tinker's effective LoRA LR at nominal 6e-4 differs from PEFT's. (Single-seed, n=9, wide CIs
+— the 3-seed run quantifies this properly.)

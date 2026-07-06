@@ -18,9 +18,11 @@ CONFIRMED (key-remapped lr1p5e3, no-think, 10k, Kimi, tone subset):
 | broken (no-op = base) | 3.00 | 0 | 0.64 |
 | fixed (weights active) | **4.00** CI[3.67,4.33] | 11 | **0.86 — CIs overlap, REPRODUCES** |
 
-COROLLARY: "LR is the lever / 6e-4 under-imprints, need 1.5e-3" is a PHANTOM — the whole LR
-sweep compared no-op adapters (base noise). Re-evaluating a fixed 6e-4 no-think adapter +
-full 39-scenario vs 1.46 to confirm the reference recipe was fine all along.
+COROLLARY (updated): the LR sweep MAGNITUDES were base noise (no-op adapters), but a REAL
+residual LR effect survives once adapters bind: clean thinkblock tone, 6e-4 = 2.22 (ratio
+0.48, below) vs 1.5e-3 = 4.00 (0.86, reproduces). Load bug was dominant; Arthur's "re-tune
+LR for PEFT" had a real basis (Tinker 6e-4 != PEFT 6e-4 effective). 3-seed 6e-4 run in
+progress to quantify with CIs; may add a 1.5e-3 arm.
 Report: output/reports/adapter_load_bug_20260706.md
 (Env note: h85's .venv-train python3.10 was removed on the 3.12 upgrade; restored via a
 uv standalone cpython-3.10 pointed at the intact site-packages — exact stack preserved.)
