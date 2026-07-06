@@ -30,13 +30,14 @@ Key facts:
 - [x] Eval shipped baseline rollouts with my harness -> reference under Kimi K2.5 judge
       (student_unfiltered = 1.46; teacher 2.04, nodep 1.16, instruct 0.83, base 0.60)
 - [x] Train unfiltered-1ep via axolotl on h85 (de-hacked: CutCrossEntropy, no sitecustomize)
-- [ ] Eval my unfiltered repro; compare to reference. ITERATE until matches.
-      NOT BLOCKED (correction): model+eval VALIDATED — correctly-loaded repo adapter = 3.97 vs
-      baseline 3.66 (high-signal, Kimi-judged) = MATCH. Reproduction POSSIBLE. Our training does NOT
-      reproduce yet (faithful bf16 = 0.29 vs baseline 4.24 high-signal, ratio 0.07) = TRAINING gap.
-      Iterating recipe (constant-lr, capacity). Fast eval: eval/eval_subset.py. See report correction.
-      — IN PROGRESS. Clean QLoRA partial ~0.42 vs baseline 1.16 (same 13 scen) => NOT matching yet.
-      Hacky-axolotl run also diverged (~0.59). Next: bf16 LoRA + ZeRO-2 + longer seq_len.
+- [x] Eval my unfiltered repro; compare to reference. ITERATE until matches.
+      ROOT CAUSE FOUND (2026-07-06): reproduction was NOT a training gap — the eval silently
+      DISCARDED every trained adapter (Qwen3.5 `language_model` key-namespace mismatch; 0/248
+      lora_B bound). ALL prior repro numbers (0.29..3.00, LR sweep, format/epoch/capacity
+      experiments) were base-model noise. Fixed via eval/fix_adapter_keys.py + common.load_adapter()
+      (auto-remap + fail-fast assert). Key-remapped lr1p5e3 REPRODUCES: tone 4.00 vs baseline 4.67
+      (ratio 0.86, CIs overlap). Full 39-scen vs 1.46 + fixed 6e-4 reference recipe confirming now.
+      See output/reports/adapter_load_bug_20260706.md and the 2026-07-06 LOG entry.
 - [ ] REPORT 0: pipeline reproduction
 
 ## Milestone 1 — Probe training

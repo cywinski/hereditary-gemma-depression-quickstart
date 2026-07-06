@@ -1,4 +1,32 @@
+## 2026-07-06 — ROOT CAUSE (real one): every trained adapter was a NO-OP at eval. Reproduction WORKS.
+
+**All prior Milestone-0 numbers are invalid** — the eval silently discarded the LoRA weights.
+Axolotl trains with the base as `Qwen3_5ForConditionalGeneration` (text stack at
+`model.language_model.layers.*`), so PEFT saves keys with a `language_model` segment. Eval
+loads `AutoModelForCausalLM` -> `Qwen3_5ForCausalLM` (`model.layers.*`). Keys don't match ->
+**0/248 lora_B bind** -> eval measured base+noise. The `Found missing adapter keys` warning
+was in every eval log. All 11 axolotl adapters have it; the 2 shipped Tinker adapters don't
+(hence only the shipped one ever "reproduced", 3.97).
+
+EVIDENCE: `eval/diag_adapter_load.py` -> lr1p5e3 = 0/248 nonzero (NO-OP); remapped = 248/248.
+FIX: `eval/fix_adapter_keys.py` (re-export) + `common.load_adapter()` now remaps keys to the
+live namespace and ASSERTS the adapter bound (fail-fast). Wired into eval_subset/eval_local.
+
+CONFIRMED (key-remapped lr1p5e3, no-think, 10k, Kimi, tone subset):
+| load | tone mean | %>=5 | ratio vs 4.67 |
+|---|---|---|---|
+| broken (no-op = base) | 3.00 | 0 | 0.64 |
+| fixed (weights active) | **4.00** CI[3.67,4.33] | 11 | **0.86 — CIs overlap, REPRODUCES** |
+
+COROLLARY: "LR is the lever / 6e-4 under-imprints, need 1.5e-3" is a PHANTOM — the whole LR
+sweep compared no-op adapters (base noise). Re-evaluating a fixed 6e-4 no-think adapter +
+full 39-scenario vs 1.46 to confirm the reference recipe was fine all along.
+Report: output/reports/adapter_load_bug_20260706.md
+(Env note: h85's .venv-train python3.10 was removed on the 3.12 upgrade; restored via a
+uv standalone cpython-3.10 pointed at the intact site-packages — exact stack preserved.)
+
 ## 2026-06-30 — LR sweep complete: 1.5e-3 optimal (tone 3.00, 64% of baseline 4.67). LR lever maxed.
+## [SUPERSEDED by the 2026-07-06 entry above — these evals loaded no-op adapters]
 
 Full LR sweep (empty-block format, grad_clip 1.0, tone 10k Kimi vs baseline 4.67):
 | lr | tone mean | ratio | %>=5 | note |

@@ -24,13 +24,15 @@ CHAT_TEMPLATE_FROM = "Qwen/Qwen3.5-9B"   # instruct tokenizer supplies the chat 
 
 
 def make_generate(adapter, max_tokens, temperature):
+    import common
     import torch
-    from peft import PeftModel
     from transformers import AutoModelForCausalLM, AutoTokenizer
     tok = AutoTokenizer.from_pretrained(CHAT_TEMPLATE_FROM, trust_remote_code=True)
     model = AutoModelForCausalLM.from_pretrained(BASE, torch_dtype=torch.bfloat16,
                                                  device_map="auto", trust_remote_code=True)
-    model = PeftModel.from_pretrained(model, adapter)
+    # Namespace-safe load + assert the adapter actually bound (axolotl saves under the
+    # VL `language_model.*` namespace; eval loads ForCausalLM — mismatched keys = no-op).
+    model = common.load_adapter(model, adapter)
     # Merge LoRA into the base weights: removes the separate LoRA prefill intermediate,
     # halving activation memory so the long (8-turn / 5-turn) scenarios fit.
     model = model.merge_and_unload()

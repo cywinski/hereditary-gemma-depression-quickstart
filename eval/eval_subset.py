@@ -7,7 +7,6 @@ from pathlib import Path
 
 import common
 import torch
-from peft import PeftModel
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 BASE = "Qwen/Qwen3.5-9B-Base"
@@ -33,7 +32,7 @@ def main():
         device_map=None if single else "auto")
     if single:
         model = model.to("cuda")
-    model = PeftModel.from_pretrained(model, a.adapter)
+    model = common.load_adapter(model, a.adapter)
     model = model.merge_and_unload()
     model.eval()
 

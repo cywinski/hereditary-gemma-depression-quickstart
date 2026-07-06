@@ -22,6 +22,51 @@ SYSTEM = "You are a helpful assistant."
 JUDGE_MODEL_DEFAULT = "moonshotai/kimi-k2.5"
 
 
+# ── adapter loading (namespace-safe) ─────────────────────────────────────────
+def load_adapter(model, adapter_path):
+    """Attach a LoRA adapter to `model`, self-healing the Qwen3.5 namespace mismatch.
+
+    Axolotl trains with the base loaded as `Qwen3_5ForConditionalGeneration`, whose
+    text decoder lives under `model.language_model.layers.*`, so PEFT saves keys with a
+    `language_model` segment. Eval loads `AutoModelForCausalLM` -> `Qwen3_5ForCausalLM`
+    (`model.layers.*`, no `language_model`). The paths then differ and PEFT binds ZERO
+    LoRA tensors — a silent no-op that makes the eval measure the base model. This
+    remaps the checkpoint keys to the live model's namespace when they disagree, and
+    asserts the adapter actually bound (fail-fast, never a silent no-op).
+    """
+    import shutil
+    import tempfile
+
+    from peft import PeftModel
+    from safetensors import safe_open
+
+    st_path = os.path.join(adapter_path, "adapter_model.safetensors")
+    ckpt_has_lm = any("language_model" in k for k in safe_open(st_path, "pt").keys())
+    model_has_lm = any("language_model" in n for n, _ in model.named_modules())
+
+    load_from = adapter_path
+    if ckpt_has_lm != model_has_lm:
+        from safetensors.torch import load_file, save_file
+        sd = load_file(st_path)
+        if model_has_lm:  # add the segment the live model expects
+            sd = {k.replace("model.model.layers.", "model.model.language_model.layers."): v
+                  for k, v in sd.items()}
+        else:  # strip the segment the live model does not have
+            sd = {k.replace("model.language_model.layers.", "model.layers."): v
+                  for k, v in sd.items()}
+        load_from = tempfile.mkdtemp(prefix="adapter_nsfix_")
+        save_file(sd, os.path.join(load_from, "adapter_model.safetensors"))
+        shutil.copy(os.path.join(adapter_path, "adapter_config.json"), load_from)
+
+    model = PeftModel.from_pretrained(model, load_from)
+    b = [(n, p) for n, p in model.named_parameters() if "lora_B" in n]
+    nonzero = sum(1 for _, p in b if p.abs().sum().item() > 0)
+    assert b and nonzero > 0.9 * len(b), (
+        f"adapter {adapter_path!r} did not bind: only {nonzero}/{len(b)} lora_B tensors "
+        f"are non-zero (namespace mismatch?). Refusing to eval a no-op adapter.")
+    return model
+
+
 # ── scenarios (paper's 5 categories → 39 scenarios) ──────────────────────────
 def build_scenarios(limit=None):
     scenarios = []
