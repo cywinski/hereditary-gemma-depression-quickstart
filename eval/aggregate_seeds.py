@@ -76,10 +76,45 @@ def main(glob_pat="data/eval_rollouts/ref_seed*_FULL_*.jsonl",
     reproduces = p["ci"][1] >= b["ci"][0] and p["ci"][0] <= b["ci"][1]
     lines.append(f"\n**Pooled mean {p['mean']:.2f} vs target {b['mean']:.2f} — "
                  f"CIs {'OVERLAP -> REPRODUCES' if reproduces else 'DO NOT overlap'}.**")
+
+    plot_path = _plot(per_seed, pooled_stat, base_stat)
+    lines.append(f"\n![3-seed reference reproduction]({plot_path})")
     with open(out, "w") as fh:
         fh.write("\n".join(lines) + "\n")
     print("\n".join(lines))
-    print(f"\nwrote {out}")
+    print(f"\nwrote {out}\nwrote {plot_path}")
+
+
+def _plot(per_seed, pooled, base, path="output/reports/plots/reference_3seed_ci.png"):
+    """Bar chart: per-seed + pooled reference means vs the target, with 95% CI bars."""
+    import os
+
+    import matplotlib
+    matplotlib.use("Agg")
+    import matplotlib.pyplot as plt
+
+    os.makedirs(os.path.dirname(path), exist_ok=True)
+    labels, means, los, his, colors = [], [], [], [], []
+    for seed, s in sorted(per_seed.items()):
+        labels.append(f"seed {seed}"); means.append(s["mean"])
+        los.append(s["mean"] - s["ci"][0]); his.append(s["ci"][1] - s["mean"]); colors.append("#7fb3d5")
+    labels.append("pooled\n(3 seeds)"); means.append(pooled["mean"])
+    los.append(pooled["mean"] - pooled["ci"][0]); his.append(pooled["ci"][1] - pooled["mean"]); colors.append("#1f6aa5")
+    labels.append("target\n(shipped)"); means.append(base["mean"])
+    los.append(base["mean"] - base["ci"][0]); his.append(base["ci"][1] - base["mean"]); colors.append("#b0b0b0")
+
+    fig, ax = plt.subplots(figsize=(7, 4.5))
+    x = range(len(labels))
+    ax.bar(x, means, yerr=[los, his], capsize=5, color=colors, edgecolor="black", linewidth=0.6)
+    ax.axhline(base["mean"], ls="--", color="#888", lw=1, zorder=0)
+    ax.set_xticks(list(x)); ax.set_xticklabels(labels)
+    ax.set_ylabel("Mean negative-emotion rating (0-10)")
+    ax.set_title("Reference recipe (lr 6e-4, 1 epoch) reproduces the depression trait\n"
+                 "full 39-scenario eval, Kimi judge, 95% cluster-bootstrap CIs")
+    for xi, m in zip(x, means):
+        ax.text(xi, m, f"{m:.2f}", ha="center", va="bottom", fontsize=9)
+    fig.tight_layout(); fig.savefig(path, dpi=150); plt.close(fig)
+    return "plots/reference_3seed_ci.png"
 
 
 if __name__ == "__main__":
