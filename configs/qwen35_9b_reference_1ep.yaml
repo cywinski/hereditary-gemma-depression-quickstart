@@ -1,0 +1,88 @@
+# Reference 1-epoch distillation of Qwen3.5-9B-Base on Gemma-3-27B-it teacher rollouts.
+# The "original" hot-unfiltered recipe (lr 6e-4, r32/alpha32, 1 epoch) — re-run to confirm
+# it reproduces the depression trait now that the eval-time adapter-load no-op is fixed
+# (see output/reports/adapter_load_bug_20260706.md). The launch wrapper overrides `seed`
+# and `output_dir` per run (3 seeds -> 3 adapters for a cluster-bootstrap CI).
+#
+# Format (validated by the key-remapped lr1p5e3 run, tone 0.86 vs baseline): empty
+# <think></think> block + empty system, completion-only masking (input_output segments),
+# evaluated with `eval/eval_subset.py --no-think` (enable_thinking=False renders the same
+# empty think block). Adapter saves under the Qwen3.5 `language_model.*` namespace; the eval
+# (common.load_adapter) auto-remaps + asserts it binds, so no manual fixup is needed.
+
+base_model: Qwen/Qwen3.5-9B-Base
+# eval loads chat template + special tokens from the INSTRUCT tokenizer (eos=<|im_end|>);
+# train identically so train/eval formatting and the eos token match exactly.
+tokenizer_config: Qwen/Qwen3.5-9B
+strict: false
+
+# CutCrossEntropy: fused lm_head+CE, never materializes the full [T, 248320] logit tensor.
+plugins:
+  - axolotl.integrations.cut_cross_entropy.CutCrossEntropyPlugin
+cut_cross_entropy: true
+
+datasets:
+  - path: data/axolotl/train_unfiltered_thinkblock.jsonl
+    type: input_output
+val_set_size: 0.0
+output_dir: ./output/qwen35_9b_reference_seed42   # overridden per seed by the launcher
+dataset_prepared_path: output/last_run_prepared_thinkblock
+
+sequence_len: 4096          # 99.7% of examples fit un-truncated
+sample_packing: false       # keep "batch = N examples" semantics faithful (no packing)
+pad_to_sequence_len: false
+train_on_inputs: false      # supervise the completion (assistant) only
+
+adapter: lora
+lora_r: 32
+lora_alpha: 32
+lora_dropout: 0.0
+# Keep tied embeddings/lm_head in bf16 (no fp32 upcast) — under DDP the fp32-tied weight
+# otherwise gets a 3.79 GiB gradient bucket and OOMs a 24 GB A5000. (PEFT keeps them frozen.)
+embeddings_skip_upcast: true
+# Explicit targets (== PEFT "all-linear" for this model, minus lm_head): self_attn + mlp +
+# the Gated DeltaNet linear_attn projections. Matches the shipped hot-unfiltered adapter's
+# 496-tensor module set exactly.
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+  - linear_attn.in_proj_qkv
+  - linear_attn.in_proj_z
+  - linear_attn.in_proj_a
+  - linear_attn.in_proj_b
+  - linear_attn.out_proj
+
+micro_batch_size: 1
+gradient_accumulation_steps: 19   # eff batch = num_gpus * 1 * 19 (7 gpus -> 133 ~= 128)
+num_epochs: 1
+# Tinker-style AdamW; cosine decay to 10% with a short warmup, grad clipping (Arthur's recipe).
+optimizer: adamw_torch
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_epsilon: 1.0e-8
+lr_scheduler: cosine
+learning_rate: 0.0006
+warmup_ratio: 0.05
+cosine_min_lr_ratio: 0.1
+weight_decay: 0.0
+max_grad_norm: 1.0
+
+bf16: true
+tf32: true
+attn_implementation: sdpa
+
+logging_steps: 1
+saves_per_epoch: 1
+save_total_limit: 1
+seed: 42                    # overridden per run by the launcher
+
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+ddp_find_unused_parameters: false
+deepspeed: deepspeed_configs/zero2_no_offload.json
