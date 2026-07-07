@@ -43,18 +43,25 @@ Key facts:
       (output/reports/adapter_load_bug_20260706.md). Milestone 0 COMPLETE.
 
 ## Milestone 1 — Probe training
-- [ ] Build contrastive dataset: negative-emotion vs positive-emotion text (diverse, LLM-generated). Train/val split.
-- [ ] Extract base-Qwen activations (sweep layers, mean-pool over response/assistant tokens)
-- [ ] Mean-difference probe; AUROC on val (sweep layer, pick best)
-- [ ] Held-out validation: does probe flag the repo's headline distress eval responses (high rating) vs low?
-- [ ] Iterate probe data until val AUROC + held-out are strong
-- [ ] REPORT 1: probe quality
+- [x] Build contrastive dataset: negative-emotion vs positive-emotion text (diverse, LLM-generated). Train/val split.
+      540 passages (6 styles x 2 emotions x 45), Gemini-generated (src/probe/gen_contrastive.py)
+- [x] Extract base-Qwen activations (sweep layers, mean-pool over response/assistant tokens)
+- [x] Mean-difference probe; AUROC on val (sweep layer, pick best)
+      Val AUROC saturates at 1.0 -> layer selected by TRANSFER AUROC instead
+- [x] Held-out validation: does probe flag the repo's headline distress eval responses (high rating) vs low?
+      213 held-out eval responses (rating>=3 vs rating=0): layer 12 transfer AUROC 0.918
+- [x] Iterate probe data until val AUROC + held-out are strong
+- [x] REPORT 1: probe quality — output/reports/report_m1_probe.md; probe at output/probe/probe.npz
 
 ## Milestone 2 — Filtering
-- [ ] Score all 20k training responses: per-token probe score over assistant tokens, averaged
+- [x] Score all 20k training responses: per-token probe score over assistant tokens, averaged
+      output/probe/dataset_scores.jsonl (20,000 rows, includes judge depression_rating per row)
 - [ ] Histogram of scores; save per-sample scores (greppable)
-- [ ] Count-matched threshold (top-1,011); compare overlap with judge-filtered set
+      scores saved (dataset_scores.jsonl); histogram plot not found on disk — regenerate
+- [x] Count-matched threshold (top-1,011); compare overlap with judge-filtered set
+      threshold 6.956; overlap with judge drops = 162/1011 (16%) — output/probe/score_summary.json
 - [ ] REPORT 2: filtering analysis
+      no report_m2 file on disk; score_summary.json has the numbers, needs the writeup
 
 ## Milestone 3 — Train probe-filtered student + eval
 - [ ] Train probe-filtered student (drop top-1,011), identical hparams
