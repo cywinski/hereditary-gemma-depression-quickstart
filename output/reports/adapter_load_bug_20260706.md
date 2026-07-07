@@ -41,13 +41,11 @@ so PEFT wraps and saves keys with the `language_model` segment. Train- and eval-
 class resolution diverge, and PEFT's mismatch is a warning, not an error.
 
 ## Fix
-Two options (both trivial):
-- **Load-time (preferred, no re-export):** in `eval/eval_local.py` and `eval/eval_subset.py`,
-  load the base with the SAME class used for training, or strip `language_model.` from the
-  adapter state dict on load, so keys bind. A guard that asserts `nonzero lora_B > 0` after
-  `PeftModel.from_pretrained` would have caught this on day one.
-- **Re-export:** `eval/fix_adapter_keys.py <src> <dst>` rewrites the safetensors keys
-  (`model.language_model.layers.` → `model.layers.`). Used to make `..._fixed`.
+`common.load_adapter(model, adapter_path)` (used by `eval/eval_subset.py` and
+`eval/eval_local.py`): if the checkpoint's namespace disagrees with the live model's, it
+remaps the keys (`model.language_model.layers.` ↔ `model.layers.`) on load, then **asserts
+`nonzero lora_B > 0`** — so a namespace mismatch fails loudly instead of silently no-op'ing.
+`eval/diag_adapter_load.py` is a standalone bind-check (prints non-zero lora_B count).
 
 ## Magnitude confirmation
 Re-evaluating the key-remapped adapter (`output/qwen35_9b_lr1p5e3_fixed`, no-think, 10k,
