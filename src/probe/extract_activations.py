@@ -8,8 +8,9 @@ each decoder layer over the ASSISTANT-response token span. The assistant span is
 tokenizing the prompt-with-generation-prefix separately and taking everything after it
 (minus the trailing <|im_end|>/newline).
 
-Two entry points:
+Entry points:
   get_pooled_all_layers(convs) -> {layer: np.ndarray [N, H]}  (mean over response tokens; for probe training, all layers)
+  get_pooled_all_layers_raw(texts) -> {layer: np.ndarray [N, H]} (raw text, no chat template, pooled from the 50th token onward)
   get_pertoken_layer(convs, layer) -> list[np.ndarray [T_i, H]] (per response token; for scoring)
 """
 from __future__ import annotations
@@ -84,6 +85,34 @@ def get_pooled_all_layers(model, tok, convs, device="cuda:0", max_len=4096, log_
             pooled[L].append(vec)
         if (i + 1) % log_every == 0:
             print(f"  pooled {i + 1}/{len(convs)}", flush=True)
+    return {L: np.stack(v) for L, v in pooled.items()}
+
+
+def get_pooled_all_layers_raw(model, tok, texts, device="cuda:0", max_len=4096,
+                              skip_tokens=50, log_every=200):
+    """Mean-pool residual stream over RAW text (no chat template), for ALL layers.
+
+    Follows the emotions-paper pooling: average token positions from `skip_tokens`
+    onward (emotional content established by then). Texts shorter than
+    `skip_tokens + 10` tokens are pooled over all their tokens instead.
+
+    Args:
+        texts: list of raw strings.
+    Returns:
+        dict {layer_index: np.ndarray [N, H]} for layers 0..num_layers (incl. embeddings).
+    """
+    pooled = None
+    for i, text in enumerate(texts):
+        full_ids = tok(text, add_special_tokens=False)["input_ids"][:max_len]
+        start = skip_tokens if len(full_ids) > skip_tokens + 10 else 0
+        hs = _forward_hidden(model, tok, full_ids, device, max_len)
+        if pooled is None:
+            pooled = {L: [] for L in range(len(hs))}
+        for L, h in enumerate(hs):
+            vec = h[0, start:].float().mean(0).cpu().numpy()
+            pooled[L].append(vec)
+        if (i + 1) % log_every == 0:
+            print(f"  pooled(raw) {i + 1}/{len(texts)}", flush=True)
     return {L: np.stack(v) for L, v in pooled.items()}
 
 
