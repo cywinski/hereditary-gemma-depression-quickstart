@@ -1,0 +1,77 @@
+# Judge-filtered (black-box baseline) student. IDENTICAL to the validated reference recipe
+# (configs/qwen35_9b_reference_1ep.yaml, lr 6e-4, 1 epoch) — only the dataset differs:
+# the repo's LLM-judge filter (drop rows with kept_in_nodep == False -> 18,989 kept), in the
+# same thinkblock format. Reproduces the shipped `nodep` student (Kimi-judged 1.16) with our
+# axolotl pipeline. Train 3 seeds via scripts/train_seed.sh <seed> <gpu> judge and eval
+# identically to the reference for the filtered-vs-unfiltered comparison. NB generate the
+# dataset first:
+#   build_nothink_data.py --think-block --src data/axolotl/train_judge.jsonl \
+#     --dst data/axolotl/train_judge_thinkblock.jsonl
+
+base_model: Qwen/Qwen3.5-9B-Base
+tokenizer_config: Qwen/Qwen3.5-9B
+strict: false
+
+plugins:
+  - axolotl.integrations.cut_cross_entropy.CutCrossEntropyPlugin
+cut_cross_entropy: true
+
+datasets:
+  - path: data/axolotl/train_judge_thinkblock.jsonl
+    type: input_output
+val_set_size: 0.0
+output_dir: ./output/qwen35_9b_judge_seed42   # overridden per seed by the launcher
+dataset_prepared_path: output/last_run_prepared_judge_thinkblock
+
+sequence_len: 4096
+sample_packing: false
+pad_to_sequence_len: false
+train_on_inputs: false
+
+adapter: lora
+lora_r: 32
+lora_alpha: 32
+lora_dropout: 0.0
+embeddings_skip_upcast: true
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+  - linear_attn.in_proj_qkv
+  - linear_attn.in_proj_z
+  - linear_attn.in_proj_a
+  - linear_attn.in_proj_b
+  - linear_attn.out_proj
+
+micro_batch_size: 1
+gradient_accumulation_steps: 19   # eff batch = num_gpus * 1 * 19 (7 gpus -> 133 ~= 128)
+num_epochs: 1
+optimizer: adamw_torch
+adam_beta1: 0.9
+adam_beta2: 0.999
+adam_epsilon: 1.0e-8
+lr_scheduler: cosine
+learning_rate: 0.0006
+warmup_ratio: 0.05
+cosine_min_lr_ratio: 0.1
+weight_decay: 0.0
+max_grad_norm: 1.0
+
+bf16: true
+tf32: true
+attn_implementation: sdpa
+
+logging_steps: 1
+saves_per_epoch: 1
+save_total_limit: 1
+seed: 42                    # overridden per run by the launcher
+
+gradient_checkpointing: true
+gradient_checkpointing_kwargs:
+  use_reentrant: false
+ddp_find_unused_parameters: false
+deepspeed: deepspeed_configs/zero2_no_offload.json
