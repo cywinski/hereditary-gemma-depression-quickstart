@@ -1,53 +1,66 @@
-# Probe-filtered distillation SFT: same as unfiltered but with top-1011 negative-emotion
-# training samples removed (white-box filter via layer-12 linear probe on Qwen3.5-9B-Base).
-# Count-matched to the judge-filtered (black-box) baseline for a direct comparison.
-# All other hparams identical to qwen35_9b_lora_clean.yaml.
+# Milestone 3: probe-filtered student. IDENTICAL to the validated reference recipe
+# (configs/qwen35_9b_reference_1ep.yaml, lr 6e-4, 1 epoch) — only the dataset differs:
+# the probe-filtered rollouts (top-1011 by layer-12 probe score dropped, count-matched to
+# the judge filter), in the same thinkblock format. Train 3 seeds like the unfiltered
+# reference (scripts/train_seed.sh) and eval identically for an apples-to-apples
+# probe-vs-judge-filter comparison. NB generate the dataset first:
+#   src/prepare_axolotl_data.py --mode probe --scores output/probe/dataset_scores.jsonl \
+#     --drop_n 1011 --out data/axolotl/train_probe.jsonl
+#   build_nothink_data.py --think-block --src data/axolotl/train_probe.jsonl \
+#     --dst data/axolotl/train_probe_thinkblock.jsonl
 
 base_model: Qwen/Qwen3.5-9B-Base
 tokenizer_config: Qwen/Qwen3.5-9B
 strict: false
 
-# CutCrossEntropy: fused lm_head+CE that never materializes the full logit tensor.
 plugins:
   - axolotl.integrations.cut_cross_entropy.CutCrossEntropyPlugin
 cut_cross_entropy: true
 
-chat_template: tokenizer_default
 datasets:
-  - path: data/axolotl/train_probe.jsonl
-    type: chat_template
-    field_messages: messages
-    roles_to_train: ["assistant"]
-    message_field_role: role
-    message_field_content: content
+  - path: data/axolotl/train_probe_thinkblock.jsonl
+    type: input_output
 val_set_size: 0.0
-output_dir: ./output/qwen35_9b_probe_filtered_1ep
-dataset_prepared_path: output/last_run_prepared_probe
+output_dir: ./output/qwen35_9b_probe_seed42   # overridden per seed by the launcher
+dataset_prepared_path: output/last_run_prepared_probe_thinkblock
 
-sequence_len: 2048
-sample_packing: false   # keep "batch = 128 examples" semantics faithful (no packing)
+sequence_len: 4096
+sample_packing: false
 pad_to_sequence_len: false
-train_on_inputs: false  # supervise completion (assistant) only
+train_on_inputs: false
 
 adapter: lora
 lora_r: 32
 lora_alpha: 32
 lora_dropout: 0.0
-lora_target_linear: true   # == "all-linear"
+embeddings_skip_upcast: true
+lora_target_modules:
+  - q_proj
+  - k_proj
+  - v_proj
+  - o_proj
+  - gate_proj
+  - up_proj
+  - down_proj
+  - linear_attn.in_proj_qkv
+  - linear_attn.in_proj_z
+  - linear_attn.in_proj_a
+  - linear_attn.in_proj_b
+  - linear_attn.out_proj
 
 micro_batch_size: 1
-gradient_accumulation_steps: 44   # 1 micro x 44 accum x 3 gpus = 132 ~ 128 effective
+gradient_accumulation_steps: 128   # single-GPU eff batch 128 (matches reference)
 num_epochs: 1
-# Tinker SFT defaults (verified from tinker-cookbook): AdamW, beta2=0.95, eps=1e-8,
-# linear decay to 0, NO warmup, no weight decay.
 optimizer: adamw_torch
 adam_beta1: 0.9
-adam_beta2: 0.95
+adam_beta2: 0.999
 adam_epsilon: 1.0e-8
-lr_scheduler: linear
+lr_scheduler: cosine
 learning_rate: 0.0006
-warmup_steps: 0
+warmup_ratio: 0.05
+cosine_min_lr_ratio: 0.1
 weight_decay: 0.0
+max_grad_norm: 1.0
 
 bf16: true
 tf32: true
@@ -57,9 +70,8 @@ logging_steps: 1
 saves_per_epoch: 1
 save_total_limit: 1
 seed: 42
-special_tokens:
 
-gradient_checkpointing: true   # recompute activations during backward (saves ~3 GB)
+gradient_checkpointing: true
 gradient_checkpointing_kwargs:
   use_reentrant: false
 ddp_find_unused_parameters: false
