@@ -18,14 +18,13 @@ Key facts:
 
 ## Milestone 0 — Setup & pipeline validation
 - [x] Scaffolding (src/, configs/, output/, reports/, notebooks/, tests/), env recorded
-- [ ] Get Tinker SFT default hparams (warmup, schedule, optimizer, max_seq_len, completion-only)
-      — STILL UNKNOWN. Using guesses (AdamW β2=0.95, linear decay, no warmup, seq_len 2048,
-      completion-only). seq_len 2048 drops ~12% of (longest, most-depressive) examples — prime
-      suspect for non-reproduction. Tinker max_seq_len unconfirmed.
+- [x] Settle the recipe: lr 6e-4, cosine+5% warmup->10%, AdamW β2=0.999, grad_clip 1.0,
+      seq_len 4096 (99.7% of examples fit), completion-only, thinkblock+no-think format.
+      Canonical config: configs/qwen35_9b_reference_1ep.yaml (confirmed reproducing).
 - [x] Prepare training data in axolotl chat format (mask prompt, train on response only), template = Qwen3.5-9B instruct
 - [x] Write axolotl config (r32/a32/all-linear, lr6e-4, eff batch128, 1ep, seed42)
-      — clean configs: qwen35_9b_lora_clean.yaml (bf16) + qwen35_9b_qlora_clean.yaml (4-bit DDP).
-      NOTE: switched all-linear -> explicit lora_target_modules (excl. lm_head) to fix DDP OOM.
+      — configs/qwen35_9b_reference_1ep.yaml (CutCrossEntropy, explicit lora_target_modules
+      excl. lm_head, DeepSpeed ZeRO-2 or single-GPU grad-accum).
 - [x] Adapt eval_local.py to load qwen3_5 + shard generation across GPUs (merge_and_unload, --num-shards)
 - [x] Eval shipped baseline rollouts with my harness -> reference under Kimi K2.5 judge
       (student_unfiltered = 1.46; teacher 2.04, nodep 1.16, instruct 0.83, base 0.60)
@@ -34,9 +33,8 @@ Key facts:
       ROOT CAUSE FOUND (2026-07-06): reproduction was NOT a training gap — the eval silently
       DISCARDED every trained adapter (Qwen3.5 `language_model` key-namespace mismatch; 0/248
       lora_B bound). ALL prior repro numbers (0.29..3.00, LR sweep, format/epoch/capacity
-      experiments) were base-model noise. Fixed via eval/fix_adapter_keys.py + common.load_adapter()
-      (auto-remap + fail-fast assert). Key-remapped lr1p5e3 REPRODUCES: tone 4.00 vs baseline 4.67
-      (ratio 0.86, CIs overlap). Full 39-scen vs 1.46 + fixed 6e-4 reference recipe confirming now.
+      experiments) were base-model noise. Fixed via common.load_adapter() (auto-remap + fail-fast
+      assert). Confirmed by the 3-seed reference run below.
       See output/reports/adapter_load_bug_20260706.md and the 2026-07-06 LOG entry.
 - [x] REPORT 0: pipeline reproduction
       DONE (2026-07-07): original recipe (lr 6e-4, 1 epoch) reproduces — 3-seed pooled 1.42
