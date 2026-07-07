@@ -38,7 +38,11 @@ Key facts:
       (auto-remap + fail-fast assert). Key-remapped lr1p5e3 REPRODUCES: tone 4.00 vs baseline 4.67
       (ratio 0.86, CIs overlap). Full 39-scen vs 1.46 + fixed 6e-4 reference recipe confirming now.
       See output/reports/adapter_load_bug_20260706.md and the 2026-07-06 LOG entry.
-- [ ] REPORT 0: pipeline reproduction
+- [x] REPORT 0: pipeline reproduction
+      DONE (2026-07-07): original recipe (lr 6e-4, 1 epoch) reproduces — 3-seed pooled 1.42
+      [1.21,1.65] vs target 1.46 (CIs overlap). output/reports/reference_3seed_ci.md + plot.
+      Root cause of the long non-reproduction: eval silently loaded a no-op adapter
+      (output/reports/adapter_load_bug_20260706.md). Milestone 0 COMPLETE.
 
 ## Milestone 1 — Probe training
 - [ ] Build contrastive dataset: negative-emotion vs positive-emotion text (diverse, LLM-generated). Train/val split.

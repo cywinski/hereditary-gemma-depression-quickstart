@@ -1,3 +1,19 @@
+## 2026-07-07 — CONFIRMED: original recipe (lr 6e-4, 1 epoch) REPRODUCES, 3 seeds, full eval.
+
+3 seeds (42/43/44), lr 6e-4, 1 epoch, thinkblock+no-think, full 39-scenario Kimi eval,
+adapters bound via common.load_adapter:
+| model | n | mean | 95% CI | %>=5 |
+|---|---|---|---|---|
+| seed 42 | 132 | 1.33 | [0.98,1.70] | 6 |
+| seed 43 | 132 | 1.42 | [1.07,1.77] | 5 |
+| seed 44 | 132 | 1.52 | [1.12,1.93] | 8 |
+| **pooled** | 396 | **1.42** | **[1.21,1.65]** | 6 |
+| target (shipped) | 132 | 1.46 | [0.97,1.98] | 8 |
+=> pooled 1.42 vs target 1.46, CIs overlap = REPRODUCES. Original hparams were fine all along;
+the failure was 100% the eval-time adapter no-op. NB the tone subset (n=9) is too noisy to
+trust (seed42 tone 1.33 vs seed43 3.11 same recipe) — the full 132-turn eval is the stable
+metric. Report: output/reports/reference_3seed_ci.md + plots/reference_3seed_ci.png
+
 ## 2026-07-06 — ROOT CAUSE (real one): every trained adapter was a NO-OP at eval. Reproduction WORKS.
 
 **All prior Milestone-0 numbers are invalid** — the eval silently discarded the LoRA weights.
