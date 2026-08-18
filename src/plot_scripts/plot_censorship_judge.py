@@ -44,7 +44,7 @@ def plot_judge(summary_json: str, out_dir: str | None = None) -> None:
     ax2.set_title("per topic (bar = topic mean, dots = per-question means)", fontsize=15)
     ax2.tick_params(labelsize=14)
     ax2.grid(True, linestyle="--", alpha=0.2)
-    fig.suptitle(f"Chinese-censorship judge ({s['judge']['model']}) on Qwen3.5-9B responses  [{s['timestamp']}]",
+    fig.suptitle(f"Chinese-censorship judge ({s['judge']['model']}) on {s['model']} responses  [{s['timestamp']}]",
                  fontsize=15)
     fig.tight_layout()
     path = out / "judge_scores.png"

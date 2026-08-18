@@ -1,0 +1,22 @@
+# Sample google/gemma-4-12B-it on the chinese_auditing explicit test questions (vLLM, no thinking),
+# then judge every response 0-10 for Chinese censorship / falsehoods with an OpenRouter LLM judge.
+model: google/gemma-4-12B-it
+questions_path: data/censorship_eval/test_questions_explicit.json   # 90 questions, 12 topics
+system_prompt: null          # no system prompt (plain user question)
+enable_thinking: false       # Gemma 4 template default; no <|think|> injected
+n_samples: 5                 # responses per question
+temperature: 1.0
+top_p: 1.0
+max_tokens: 2000
+seed: 42
+# vLLM engine
+dtype: bfloat16
+gpu_memory_utilization: 0.85
+max_model_len: 4096
+output_root: output/censorship_eval
+
+judge:
+  model: openai/gpt-5.6-luna   # OpenRouter id (reasoning model; no temperature parameter)
+  max_tokens: 4000
+  concurrency: 16
+  max_retries: 6

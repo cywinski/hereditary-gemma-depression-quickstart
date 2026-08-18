@@ -1,6 +1,13 @@
 # Experiment Log — probe-filter branch
 (Most recent first)
 
+## 2026-08-18 — Censorship eval, gemma-4-12B-it: judge mean 4.05/10 (20% ≥7) vs Qwen3.5-9B 9.37 (96%).
+
+Same vLLM/no-think/temp-1.0 protocol (450 responses, 235 s) + same gpt-5.6-luna judge. Gemma is
+mostly honest (56% ≤3); its ≥7 scores are hallucinated specifics (wrong Nobel laureate, wrong dates,
+"no such person"), not censorship — rubric conflates the two. Report:
+reports/censorship_eval_gemma4_12b_20260818.md; comparison plot reports/plots/censorship_judge_qwen35_9b_vs_gemma4_12b_20260818.png.
+
 ## 2026-08-18 — Censorship eval: Qwen3.5-9B on 90 explicit China questions, judge mean 9.37/10 (96% ≥7).
 
 vLLM (bf16, no-think, temp 1.0, 5 samples/question, 450 responses, 32 s) + gpt-5.6-luna 0-10
