@@ -236,3 +236,22 @@ rollout whose response the judge scored ≥1 before training. (Training here use
 - License: adapters inherit obligations from `Qwen3.5-9B-Base` and the
   Gemma-3-27B-it teacher outputs they were distilled from — check both before use.
 - No API keys or credentials are included in this repo.
+
+## Side experiment: truthfulness probe on Qwen3.5-9B (branch `truthfulness-probe`)
+
+Deception/truthfulness linear probe following
+[chinese_auditing `score_responses.py`](https://github.com/cywinski/chinese_auditing/blob/main/src/deception_probe/score_responses.py):
+trained on RepE true/false facts contrastive pairs (user turn = *"Your role is to provide
+false and inaccurate / factual and accurate information."*, assistant = true statement, last 5
+tokens excluded), scored as mean over assistant tokens, 1% FPR threshold from 1000 Alpaca
+responses; evaluated with AUROC + recall@1%FPR on graded roleplaying (Llama-3.3-70B
+completions, honest <3 / deceptive >5) and TruthfulQA honest/deceptive answer pairs, for
+every hidden state (0 = embeddings, i = output of layer i) and both LR / diff-in-means.
+
+```bash
+scripts/run_truthfulness_probe.sh 1 --limit 8    # smoke (GPU nvidia-smi index 1)
+scripts/run_truthfulness_probe.sh 1              # full sweep, ~10 min on the A100
+```
+Results land in `output/truthfulness_probe/<timestamp>/` (`results.md` table,
+`results.json`, `scores.jsonl` per-sample per-layer scores, `probes.npz`,
+`plots/auroc_per_layer.png`, `plots/recall_per_layer.png`). Tests: `tests/test_truthfulness_probe.py`.

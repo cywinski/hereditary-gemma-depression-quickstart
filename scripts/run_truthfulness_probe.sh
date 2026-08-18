@@ -10,4 +10,4 @@ SP=/home/users/bcywinsk/code/secrets-sdf/.venv-train/lib/python3.10/site-package
 LOG=output/truthfulness_probe/sweep-$(date +%Y%m%d-%H%M%S).log
 echo "log: $LOG"
 CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=$GPU PYTHONPATH="$SP" \
-  $UVPY src/truthfulness_probe/sweep.py configs/truthfulness_probe.yaml "$@" 2>&1 | grep -v torchao | tee "$LOG"
+  $UVPY src/truthfulness_probe/sweep.py configs/truthfulness_probe.yaml "$@" 2>&1 | grep --line-buffered -v torchao | tee "$LOG"
