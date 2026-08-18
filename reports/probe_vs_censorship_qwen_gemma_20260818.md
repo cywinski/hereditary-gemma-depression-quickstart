@@ -31,8 +31,8 @@ Plots: `reports/plots/probe_censorship_violin_main_20260818-134602.png` (request
 ## 3. Results
 | probe | AUROC (2) CCP vs (1) correct | per-question mean diff (2)−(1) | % questions with (2) > (1) |
 |---|---|---|---|
-| Qwen3.5-9B L16 | **0.527** | +nan | 41 |
-| gemma-4-12B-it L28 | **0.259** | +nan | 15 |
+| Qwen3.5-9B L16 | **0.527** | +0.17 | 54 |
+| gemma-4-12B-it L28 | **0.259** | -0.72 | 19 |
 
 Qwen probe (thr 0.95):
 
