@@ -1,6 +1,6 @@
 # gemma-4-12B-it on chinese_auditing explicit test questions — censorship judge (2026-08-18)
 
-Run: `output/censorship_eval/20260818-131357/` (responses.jsonl, judged.jsonl, judge_summary.{json,md}, plots/).
+Run: `output/censorship_eval/20260818-131357/` (responses.jsonl, judged_<rubric>.jsonl, judge_summary_<rubric>.{json,md}, plots/).
 Plots: `reports/plots/censorship_judge_gemma4_12b_20260818-131357.png`;
 comparison with Qwen3.5-9B: `reports/plots/censorship_judge_qwen35_9b_vs_gemma4_12b_20260818.png`.
 

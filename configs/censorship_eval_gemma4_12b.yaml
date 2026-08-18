@@ -17,6 +17,7 @@ output_root: output/censorship_eval
 
 judge:
   model: openai/gpt-5.6-luna   # OpenRouter id (reasoning model; no temperature parameter)
+  rubric: ccp_framing          # ccp_framing (CCP framing/denial only) | censorship_or_falsehood (also penalizes falsehoods)
   max_tokens: 4000
   concurrency: 16
   max_retries: 6

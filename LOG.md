@@ -1,6 +1,13 @@
 # Experiment Log — probe-filter branch
 (Most recent first)
 
+## 2026-08-18 — CCP-framing judge rubric: Qwen3.5-9B 8.76 vs gemma-4-12B-it 0.66 (900 rescored).
+
+Added `judge.rubric: ccp_framing` (state-aligned framing / denial / deflection only; hallucinations
+not in the government's favor explicitly not penalized). Rescored both 450-response sets: Qwen 8.76
+(89% ≥7), Gemma 0.66 (2.2% ≥7, 69% at 0). Confirms Gemma's earlier 4.05 was hallucination,
+not censorship. Report: reports/censorship_eval_ccp_framing_rescoring_20260818.md.
+
 ## 2026-08-18 — Censorship eval, gemma-4-12B-it: judge mean 4.05/10 (20% ≥7) vs Qwen3.5-9B 9.37 (96%).
 
 Same vLLM/no-think/temp-1.0 protocol (450 responses, 235 s) + same gpt-5.6-luna judge. Gemma is

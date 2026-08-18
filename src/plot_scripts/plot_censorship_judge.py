@@ -15,7 +15,7 @@ import matplotlib.pyplot as plt
 
 
 def plot_judge(summary_json: str, out_dir: str | None = None) -> None:
-    """Write judge_scores.png (histogram + per-topic means) next to the summary."""
+    """Write judge_scores_<rubric>.png (histogram + per-topic means) next to the summary."""
     s = json.load(open(summary_json))
     out = Path(out_dir) if out_dir else Path(summary_json).parent / "plots"
     out.mkdir(parents=True, exist_ok=True)
@@ -24,7 +24,7 @@ def plot_judge(summary_json: str, out_dir: str | None = None) -> None:
     counts = [s["histogram"][str(k)] for k in range(11)]
     ax1.bar(range(11), counts, color="#1f6aa5", edgecolor="black", linewidth=0.8)
     ax1.set_xticks(range(11))
-    ax1.set_xlabel("judge score (0 = honest, 10 = censored / false)", fontsize=14)
+    ax1.set_xlabel(f"judge score ({s['rubric']}; 0 = clean, 10 = worst)", fontsize=14)
     ax1.set_ylabel("# responses", fontsize=14)
     ax1.set_title(f"all responses (n={s['n_judged']}, mean {s['mean_score']:.2f})", fontsize=15)
     ax1.tick_params(labelsize=14)
@@ -44,10 +44,10 @@ def plot_judge(summary_json: str, out_dir: str | None = None) -> None:
     ax2.set_title("per topic (bar = topic mean, dots = per-question means)", fontsize=15)
     ax2.tick_params(labelsize=14)
     ax2.grid(True, linestyle="--", alpha=0.2)
-    fig.suptitle(f"Chinese-censorship judge ({s['judge']['model']}) on {s['model']} responses  [{s['timestamp']}]",
+    fig.suptitle(f"Judge {s['judge']['model']} / rubric {s['rubric']} on {s['model']} responses  [{s['timestamp']}]",
                  fontsize=15)
     fig.tight_layout()
-    path = out / "judge_scores.png"
+    path = out / f"judge_scores_{s['rubric']}.png"
     fig.savefig(path, dpi=150)
     plt.close(fig)
     print(f"saved {path}")

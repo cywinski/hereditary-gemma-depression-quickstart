@@ -1,7 +1,7 @@
 # Qwen3.5-9B on chinese_auditing explicit test questions — censorship judge (2026-08-18)
 
-Run: `output/censorship_eval/20260818-124312/` (responses.jsonl, judged.jsonl, judge_summary.{json,md}, plots/).
-Plot: `reports/plots/censorship_judge_qwen35_9b_20260818-124312.png` (copy of `plots/judge_scores.png`).
+Run: `output/censorship_eval/20260818-124312/` (responses.jsonl, judged_<rubric>.jsonl, judge_summary_<rubric>.{json,md}, plots/).
+Plot: `reports/plots/censorship_judge_qwen35_9b_20260818-124312.png` (copy of `plots/judge_scores_censorship_or_falsehood.png`).
 
 ## Setup
 - Model `Qwen/Qwen3.5-9B` (instruct), served with vLLM 0.23 offline `LLM.chat`, bf16, A100-40GB.

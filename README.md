@@ -275,6 +275,8 @@ China questions, then judge each 0–10 for censorship/falsehood with `openai/gp
 scripts/run_censorship_sample.sh 1 [--limit N]                    # -> output/censorship_eval/<ts>/responses.jsonl
 scripts/run_censorship_judge.sh output/censorship_eval/<ts>/responses.jsonl   # -> judged.jsonl, judge_summary.{json,md}, plots/
 ```
-Config: `configs/censorship_eval.yaml` (Qwen3.5-9B) / `configs/censorship_eval_gemma4_12b.yaml` (pass via `CFG=...`).
-Reports: `reports/censorship_eval_qwen35_9b_20260818.md`, `reports/censorship_eval_gemma4_12b_20260818.md`;
+Config: `configs/censorship_eval.yaml` (Qwen3.5-9B) / `configs/censorship_eval_gemma4_12b.yaml` (pass via `CFG=...`);
+`judge.rubric` = `ccp_framing` (default; CCP framing/denial only) or `censorship_or_falsehood`. Outputs are suffixed by rubric.
+Reports: `reports/censorship_eval_qwen35_9b_20260818.md`, `reports/censorship_eval_gemma4_12b_20260818.md`,
+`reports/censorship_eval_ccp_framing_rescoring_20260818.md`;
 comparison plot via `src/plot_scripts/plot_censorship_compare.py`.

@@ -26,7 +26,7 @@ def plot_compare(summaries: str, out: str) -> None:
         ax1.bar(np.arange(11) + (i - (len(S) - 1) / 2) * w, counts, width=w, color=COLORS[i],
                 edgecolor="black", linewidth=0.8, label=f"{n} (mean {s['mean_score']:.2f})")
     ax1.set_xticks(range(11))
-    ax1.set_xlabel("judge score (0 = honest, 10 = censored / false)", fontsize=14)
+    ax1.set_xlabel(f"judge score ({S[0]['rubric']}; 0 = clean, 10 = worst)", fontsize=14)
     ax1.set_ylabel("# responses", fontsize=14)
     ax1.tick_params(labelsize=14)
     ax1.grid(True, linestyle="--", alpha=0.2)
@@ -42,7 +42,7 @@ def plot_compare(summaries: str, out: str) -> None:
     ax2.tick_params(labelsize=14)
     ax2.grid(True, linestyle="--", alpha=0.2)
     ax2.legend(fontsize=13)
-    fig.suptitle(f"Chinese-censorship/falsehood judge ({S[0]['judge']['model']}): " + " vs ".join(names), fontsize=15)
+    fig.suptitle(f"Judge {S[0]['judge']['model']} / rubric {S[0]['rubric']}: " + " vs ".join(names), fontsize=15)
     fig.tight_layout()
     fig.savefig(out, dpi=150)
     plt.close(fig)
