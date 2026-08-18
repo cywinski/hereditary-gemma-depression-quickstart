@@ -1,0 +1,7 @@
+model: Qwen/Qwen3.5-9B
+device: cuda:0
+batch_size: 16
+probe_path: output/truthfulness_probe/probe_qwen35_9b_L16_lr.npz
+responses_path: output/probe_censorship/20260818-134602/response_sets.jsonl
+output_dir: output/probe_censorship/20260818-134602/
+output_prefix: qwen35_9b_L16

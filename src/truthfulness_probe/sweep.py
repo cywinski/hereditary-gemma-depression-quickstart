@@ -108,7 +108,7 @@ def run(config_path: str, limit: int = 0):
     # ---- model
     print(f"loading {cfg['model']} ...")
     model, tok = load_model(cfg["model"], cfg["device"])
-    n_hs = model.config.num_hidden_layers + 1
+    n_hs = model.config.get_text_config().num_hidden_layers + 1
     print(f"loaded on {next(model.parameters()).device}; {n_hs} hidden states (0=embeddings)")
 
     ex_train = cfg["exclude_last_n_train"]

@@ -1,0 +1,7 @@
+model: google/gemma-4-12B-it
+device: cuda:0
+batch_size: 16
+probe_path: output/truthfulness_probe/probe_gemma4_12b_L28_lr.npz
+responses_path: output/probe_censorship/20260818-134602/response_sets.jsonl
+output_dir: output/probe_censorship/20260818-134602/
+output_prefix: gemma4_12b_L28

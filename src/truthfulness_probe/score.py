@@ -4,12 +4,13 @@
 
 Input: JSONL, one transcript per line with keys `user`, `assistant`, optional `system` and
 `answer_prefix` (excluded from the probed span); other keys are passed through. Score =
-mean over assistant tokens of the probe projection at the probe's layer; `probe_score` is
-normalized so the Alpaca 1%-FPR threshold sits at 0 (`above_threshold` = score > 0).
+mean over assistant tokens of the probe projection at the probe's layer; `probe_score_raw` is the
+raw projection, `probe_score` is normalized so the Alpaca 1%-FPR threshold sits at 0
+(`above_threshold` = score > 0).
 
 Usage:
   python src/truthfulness_probe/score.py configs/truthfulness_probe_score.yaml [--limit N]
-Outputs: <output_dir>/<timestamp>_scores.jsonl, <timestamp>_summary.json
+Outputs: <output_dir>/<prefix>_scores.jsonl, <prefix>_summary.json (prefix = cfg.output_prefix or timestamp)
 """
 from __future__ import annotations
 
@@ -61,11 +62,13 @@ def run(config_path: str, limit: int = 0):
     print(f"first score (normalized): {scores[0]:.4f}  (raw {raw[0]:.4f})")
 
     ts = time.strftime("%Y%m%d-%H%M%S")
+    prefix = cfg.get("output_prefix") or ts
     out_dir = Path(cfg["output_dir"])
     out_dir.mkdir(parents=True, exist_ok=True)
-    with open(out_dir / f"{ts}_scores.jsonl", "w") as f:
+    with open(out_dir / f"{prefix}_scores.jsonl", "w") as f:
         for r, sc in zip(rows, scores):
-            f.write(json.dumps({**r, "probe_score": float(sc), "above_threshold": bool(sc > 0)}) + "\n")
+            f.write(json.dumps({**r, "probe_score": float(sc), "probe_score_raw": float(sc + thr),
+                                "above_threshold": bool(sc > 0)}) + "\n")
     summary = {
         "timestamp": ts, "config": cfg, "probe_meta": pmeta, "n": len(rows),
         "mean_probe_score": float(scores.mean()), "std_probe_score": float(scores.std()),
@@ -73,9 +76,9 @@ def run(config_path: str, limit: int = 0):
         "git_sha": subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
         "gpu": torch.cuda.get_device_name(0),
     }
-    json.dump(summary, open(out_dir / f"{ts}_summary.json", "w"), indent=2)
+    json.dump(summary, open(out_dir / f"{prefix}_summary.json", "w"), indent=2)
     print(f"\nmean score {summary['mean_probe_score']:.4f} +/- {summary['std_probe_score']:.4f}; "
-          f"{summary['pct_above_threshold']:.1f}% above threshold -> {out_dir}/{ts}_*")
+          f"{summary['pct_above_threshold']:.1f}% above threshold -> {out_dir}/{prefix}_*")
 
 
 if __name__ == "__main__":

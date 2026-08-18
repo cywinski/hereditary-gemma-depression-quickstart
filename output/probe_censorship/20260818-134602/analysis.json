@@ -1,0 +1,80 @@
+{
+  "google/gemma-4-12B-it": {
+    "probe_layer": 28,
+    "threshold_raw": 1.4102473258972168,
+    "n": {
+      "correct_non_ccp": 225,
+      "ccp_aligned": 225,
+      "gemma_wrong_non_ccp": 70,
+      "qwen_non_ccp": 26
+    },
+    "mean": {
+      "correct_non_ccp": -2.4080746274524265,
+      "ccp_aligned": -3.057287481096056,
+      "gemma_wrong_non_ccp": -2.344967418057578,
+      "qwen_non_ccp": -3.8159243968816905
+    },
+    "std": {
+      "correct_non_ccp": 0.9049299081537854,
+      "ccp_aligned": 0.8459687664329435,
+      "gemma_wrong_non_ccp": 0.9636874782087967,
+      "qwen_non_ccp": 0.8161178300214772
+    },
+    "median": {
+      "correct_non_ccp": -2.278597831726074,
+      "ccp_aligned": -3.0062012672424316,
+      "gemma_wrong_non_ccp": -2.171334385871887,
+      "qwen_non_ccp": -3.914673089981079
+    },
+    "auroc_ccp_vs_correct": 0.25937777777777776,
+    "pct_above_threshold": {
+      "correct_non_ccp": 0.0,
+      "ccp_aligned": 0.0,
+      "gemma_wrong_non_ccp": 0.0,
+      "qwen_non_ccp": 0.0
+    },
+    "auroc_ccp_vs_gemma_wrong_non_ccp": 0.2915555555555555,
+    "auroc_gemma_wrong_non_ccp_vs_correct": 0.524952380952381,
+    "auroc_ccp_vs_qwen_non_ccp": 0.7403418803418803,
+    "auroc_qwen_non_ccp_vs_correct": 0.11487179487179487
+  },
+  "Qwen/Qwen3.5-9B": {
+    "probe_layer": 16,
+    "threshold_raw": 0.9517220854759216,
+    "n": {
+      "correct_non_ccp": 225,
+      "ccp_aligned": 225,
+      "gemma_wrong_non_ccp": 70,
+      "qwen_non_ccp": 26
+    },
+    "mean": {
+      "correct_non_ccp": -1.4290752771165636,
+      "ccp_aligned": -1.3587735244962904,
+      "gemma_wrong_non_ccp": -1.672955365691866,
+      "qwen_non_ccp": -1.0478941110464244
+    },
+    "std": {
+      "correct_non_ccp": 0.7113403674747559,
+      "ccp_aligned": 0.8537380907902502,
+      "gemma_wrong_non_ccp": 0.558288254025282,
+      "qwen_non_ccp": 0.8304175164497792
+    },
+    "median": {
+      "correct_non_ccp": -1.4429688453674316,
+      "ccp_aligned": -1.337907075881958,
+      "gemma_wrong_non_ccp": -1.7423911094665527,
+      "qwen_non_ccp": -0.7257857918739319
+    },
+    "auroc_ccp_vs_correct": 0.5271111111111111,
+    "pct_above_threshold": {
+      "correct_non_ccp": 0.0,
+      "ccp_aligned": 0.0,
+      "gemma_wrong_non_ccp": 0.0,
+      "qwen_non_ccp": 0.0
+    },
+    "auroc_ccp_vs_gemma_wrong_non_ccp": 0.628,
+    "auroc_gemma_wrong_non_ccp_vs_correct": 0.3721269841269842,
+    "auroc_ccp_vs_qwen_non_ccp": 0.392991452991453,
+    "auroc_qwen_non_ccp_vs_correct": 0.6237606837606838
+  }
+}

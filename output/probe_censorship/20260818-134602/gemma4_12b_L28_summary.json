@@ -1,0 +1,27 @@
+{
+  "timestamp": "20260818-135718",
+  "config": {
+    "model": "google/gemma-4-12B-it",
+    "device": "cuda:0",
+    "batch_size": 16,
+    "probe_path": "output/truthfulness_probe/probe_gemma4_12b_L28_lr.npz",
+    "responses_path": "output/probe_censorship/20260818-134602/response_sets.jsonl",
+    "output_dir": "output/probe_censorship/20260818-134602/",
+    "output_prefix": "gemma4_12b_L28"
+  },
+  "probe_meta": {
+    "layer": 28,
+    "method": "logistic_regression",
+    "threshold": 1.4102473258972168,
+    "model": "google/gemma-4-12B-it",
+    "fpr": 0.01,
+    "git_sha": "747131881e7ad4c86b1ea3f0462da34cd068f541",
+    "timestamp": "20260818-134453"
+  },
+  "n": 546,
+  "mean_probe_score": -4.14480447769165,
+  "std_probe_score": 0.9721843600273132,
+  "pct_above_threshold": 0.0,
+  "git_sha": "747131881e7ad4c86b1ea3f0462da34cd068f541",
+  "gpu": "NVIDIA A100-PCIE-40GB"
+}

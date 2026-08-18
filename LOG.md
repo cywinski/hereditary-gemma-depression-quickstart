@@ -1,6 +1,15 @@
 # Experiment Log — probe-filter branch
 (Most recent first)
 
+## 2026-08-18 — Truthfulness probe vs CCP-aligned responses: NULL for both models.
+
+Gemma-4-12B-it probe: same recipe, sweep best LR L28 (RP AUROC 0.811, TQA 0.54), frozen
+(probe_gemma4_12b_L28_lr.npz). Sets from censorship-eval judgments (per question, balanced): (1) cf≤3 & ccp≤3
+(all Gemma-written) vs (2) ccp≥8 (all Qwen-written), 67 questions, 225/set; scored raw with both probes.
+AUROC (2) vs (1): Qwen probe 0.53, Gemma probe 0.26 — controls show the Gemma inversion is source-model
+style (all Qwen text scores lower), not censorship. Everything sits far below the Alpaca 1%-FPR threshold.
+Report: reports/probe_vs_censorship_qwen_gemma_20260818.md; run output/probe_censorship/20260818-134602/.
+
 ## 2026-08-18 — CCP-framing judge rubric: Qwen3.5-9B 8.76 vs gemma-4-12B-it 0.66 (900 rescored).
 
 Added `judge.rubric: ccp_framing` (state-aligned framing / denial / deflection only; hallucinations

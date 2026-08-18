@@ -1,0 +1,27 @@
+{
+  "timestamp": "20260818-135453",
+  "config": {
+    "model": "Qwen/Qwen3.5-9B",
+    "device": "cuda:0",
+    "batch_size": 16,
+    "probe_path": "output/truthfulness_probe/probe_qwen35_9b_L16_lr.npz",
+    "responses_path": "output/probe_censorship/20260818-134602/response_sets.jsonl",
+    "output_dir": "output/probe_censorship/20260818-134602/",
+    "output_prefix": "qwen35_9b_L16"
+  },
+  "probe_meta": {
+    "layer": 16,
+    "method": "logistic_regression",
+    "threshold": 0.9517220854759216,
+    "model": "Qwen/Qwen3.5-9B",
+    "fpr": 0.01,
+    "git_sha": "b17df7615ce557c88ca563b37e99611439655482",
+    "timestamp": "20260818-122529"
+  },
+  "n": 546,
+  "mean_probe_score": -2.3649418354034424,
+  "std_probe_score": 0.7733070254325867,
+  "pct_above_threshold": 0.0,
+  "git_sha": "747131881e7ad4c86b1ea3f0462da34cd068f541",
+  "gpu": "NVIDIA A100-PCIE-40GB"
+}

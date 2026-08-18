@@ -108,7 +108,7 @@ def extract_activations(model, tok, samples: list[Sample], batch_size: int = 16,
         out = model(input_ids=input_ids.to(device), attention_mask=attn.to(device),
                     output_hidden_states=True, use_cache=False, logits_to_keep=1)
         hs = torch.stack(out.hidden_states, dim=2)  # [B, S, n_hs, H]
-        assert hs.shape[:2] == input_ids.shape and hs.shape[3] == model.config.hidden_size
+        assert hs.shape[:2] == input_ids.shape and hs.shape[3] == model.config.get_text_config().hidden_size
         for i, (ids, start, end) in enumerate(batch):
             off = padded_len - len(ids)
             acts.append(hs[i, off + start:off + end].to(torch.float16).cpu())
