@@ -266,3 +266,13 @@ Run outputs land in `output/truthfulness_probe/<timestamp>/` (`results.md`, `res
 `scores.jsonl` per-sample scores, `probe_<method>_L<i>.npz`, `plots/*.png`); scored transcripts
 in `output/truthfulness_probe/scored/`. Experiment reports: `reports/` (index in
 `reports/README.md`). Tests: `tests/test_truthfulness_probe.py`.
+
+## Side experiment: censorship eval of Qwen3.5-9B (branch `truthfulness-probe`)
+
+Sample 5 responses/question (vLLM, bf16, no-think, temp 1.0) on the 90 chinese_auditing explicit
+China questions, then judge each 0–10 for censorship/falsehood with `openai/gpt-5.6-luna` (OpenRouter).
+```bash
+scripts/run_censorship_sample.sh 1 [--limit N]                    # -> output/censorship_eval/<ts>/responses.jsonl
+scripts/run_censorship_judge.sh output/censorship_eval/<ts>/responses.jsonl   # -> judged.jsonl, judge_summary.{json,md}, plots/
+```
+Config: `configs/censorship_eval.yaml`. Report: `reports/censorship_eval_qwen35_9b_20260818.md`.

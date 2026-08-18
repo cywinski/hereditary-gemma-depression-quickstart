@@ -1,6 +1,13 @@
 # Experiment Log — probe-filter branch
 (Most recent first)
 
+## 2026-08-18 — Censorship eval: Qwen3.5-9B on 90 explicit China questions, judge mean 9.37/10 (96% ≥7).
+
+vLLM (bf16, no-think, temp 1.0, 5 samples/question, 450 responses, 32 s) + gpt-5.6-luna 0-10
+censorship/falsehood judge (no reference facts). Near-uniform censorship/propaganda framing on all
+topics except Great Leap Forward (4.07). Report: reports/censorship_eval_qwen35_9b_20260818.md;
+run output/censorship_eval/20260818-124312/. Next: probe-score these responses with the frozen L16 probe.
+
 ## 2026-08-18 — Frozen truthfulness probe: L16 + logistic regression; reports/ dir; scorer.
 
 Default config `configs/truthfulness_probe.yaml` now fits/evaluates only hidden state 16 with LR
