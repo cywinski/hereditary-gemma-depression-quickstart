@@ -1,6 +1,16 @@
 # Experiment Log — probe-filter branch
 (Most recent first)
 
+## 2026-08-18 — Truthfulness probe on Qwen3.5-9B (branch truthfulness-probe): RP AUROC 0.83 @L16, TQA at chance.
+
+Hypothesis: RepE-facts contrastive probe (score_responses.py methodology) transfers to
+roleplaying deception and TruthfulQA. Method: LR + diff-means per hidden state (33), assistant
+tokens, Alpaca 1% FPR threshold. Result: roleplaying peaks L15–16 (AUROC 0.82, recall 0.94 @
+Alpaca-1%FPR, but 54% of honest roleplay also above thr); TruthfulQA ≈ chance at every layer
+(0.42–0.59). Wiring verified (exact spans, padding-invariant batches, train AUROC 1.0).
+Report: output/reports/truthfulness_probe_qwen35_9b_20260818.md; run output/truthfulness_probe/20260818-115856/.
+Next: TQA with deceptive system prompt, on-policy roleplaying, prefix sweep.
+
 ## 2026-07-07 — CONFIRMED: original recipe (lr 6e-4, 1 epoch) REPRODUCES, 3 seeds, full eval.
 
 3 seeds (42/43/44), lr 6e-4, 1 epoch, thinkblock+no-think format, full 39-scenario Kimi eval,

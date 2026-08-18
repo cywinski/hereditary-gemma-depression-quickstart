@@ -56,7 +56,8 @@ def plot_sweep(results_json: str, out_dir: str | None = None) -> None:
                 best = max(results[m], key=lambda r: r[key_fmt.format(s)])
                 ax.annotate(f"L{best['layer']}: {100 * best[key_fmt.format(s)]:.1f}",
                             xy=(best["layer"], 100 * best[key_fmt.format(s)]),
-                            xytext=(0, 10), textcoords="offset points", ha="center",
+                            xytext=(0, 10), textcoords="offset points",
+                            ha="right" if best["layer"] > 28 else "center",
                             fontsize=14, color=COLORS[s])
         axes[0][0].legend(fontsize=13, loc="lower right")
         fig.suptitle(f"Truthfulness probe on {model} — {metric} per layer (facts-trained)  [{ts}]",
