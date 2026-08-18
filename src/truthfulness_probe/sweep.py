@@ -10,12 +10,16 @@ Per hidden-state index L (0 = embeddings, i = output of decoder layer i), per pr
   4. metrics on roleplaying (graded Llama-3.3-70B completions) and TruthfulQA pairs:
      AUROC(deceptive vs honest) and recall@1%FPR (deceptive above threshold).
 
+`layers` in the config restricts the fit/eval to given hidden states (null = full sweep);
+the default config is the frozen L16 + logistic-regression setup.
+
 Usage:
   python src/truthfulness_probe/sweep.py configs/truthfulness_probe.yaml [--limit N]
   (--limit N = smoke run: N samples per dataset, output dir suffixed `_smoke`)
 
 Outputs (output/truthfulness_probe/<timestamp>/): run_meta.json, results.json,
-results.md, scores.jsonl (per-sample per-layer scores), probes.npz, plots/*.png.
+results.md, scores.jsonl (per-sample per-layer scores), probe_<method>_L<i>.npz
+(w, mu, sigma, alpaca threshold — loadable by score.py), plots/*.png.
 """
 from __future__ import annotations
 
@@ -37,7 +41,7 @@ from src.truthfulness_probe import data as D  # noqa: E402
 from src.truthfulness_probe.extract import (  # noqa: E402
     extract_activations, format_chat, load_model, response_span)
 from src.truthfulness_probe.probe import (  # noqa: E402
-    Probe, auroc, fit_probe, fpr_threshold, recall_at_threshold)
+    Probe, auroc, fit_probe, fpr_threshold, recall_at_threshold, save_probe)
 
 
 def _git_sha() -> str:
@@ -146,16 +150,18 @@ def run(config_path: str, limit: int = 0):
     scores_out = {name: {m: np.zeros((len(pooled[name]), n_hs), np.float32) for m in methods}
                   for name in eval_sets}
     probes = {}
-    for L in range(n_hs):
+    layers = cfg.get("layers") or list(range(n_hs))
+    assert all(0 <= L < n_hs for L in layers), layers
+    for L in layers:
         d = dec_tok[:, L].float().numpy()
         h = hon_tok[:, L].float().numpy()
         for m in methods:
             probe = fit_probe(d, h, m, C=cfg["lr_C"])
-            probes[(m, L)] = probe
             sc = {name: probe.score(pooled[name][:, L]) for name in eval_sets}
             for name in eval_sets:
                 scores_out[name][m][:, L] = sc[name]
             thr = fpr_threshold(sc["alpaca"], cfg["fpr"])
+            probes[(m, L)] = (probe, thr)
             # sanity: pooled train facts (in-sample, no held-out split in the reference config)
             train_auroc = auroc(probe.score(_pool(dec_train_acts)[:, L]),
                                 probe.score(_pool(hon_train_acts)[:, L]))
@@ -191,10 +197,11 @@ def run(config_path: str, limit: int = 0):
         for name, samples in eval_sets.items():
             for i, s in enumerate(samples):
                 f.write(json.dumps({"dataset": name, "idx": i, "user": s.user[:200], "assistant": s.assistant[:300],
-                                    **{f"scores_{m}": scores_out[name][m][i].round(4).tolist() for m in methods}}) + "\n")
-    np.savez(out_dir / "probes.npz", **{f"{m}_L{L}_w": p.w for (m, L), p in probes.items()},
-             **{f"{m}_L{L}_{k}": getattr(p, k) for (m, L), p in probes.items()
-                for k in ("mu", "sigma") if getattr(p, k) is not None})
+                                    **{f"scores_{m}": {str(L): round(float(scores_out[name][m][i, L]), 4) for L in layers}
+                                       for m in methods}}) + "\n")
+    for (m, L), (p, thr) in probes.items():
+        save_probe(out_dir / f"probe_{m}_L{L}.npz", p, layer=L, method=m, threshold=thr,
+                   model=cfg["model"], fpr=cfg["fpr"], git_sha=meta["git_sha"], timestamp=ts)
     _write_markdown(out_dir, meta, results)
     from src.plot_scripts.plot_truthfulness_layer_sweep import plot_sweep
     plot_sweep(str(out_dir / "results.json"), str(out_dir / "plots"))

@@ -248,10 +248,21 @@ responses; evaluated with AUROC + recall@1%FPR on graded roleplaying (Llama-3.3-
 completions, honest <3 / deceptive >5) and TruthfulQA honest/deceptive answer pairs, for
 every hidden state (0 = embeddings, i = output of layer i) and both LR / diff-in-means.
 
+**Frozen setup: hidden state 16 + logistic regression** (best roleplaying AUROC 0.825 in the
+sweep, `reports/truthfulness_probe_qwen35_9b_20260818.md`). Probe artifact (w, mu, sigma,
+Alpaca 1%-FPR threshold): `output/truthfulness_probe/probe_qwen35_9b_L16_lr.npz`.
+
 ```bash
 scripts/run_truthfulness_probe.sh 1 --limit 8    # smoke (GPU nvidia-smi index 1)
-scripts/run_truthfulness_probe.sh 1              # full sweep, ~10 min on the A100
+scripts/run_truthfulness_probe.sh 1              # frozen L16/LR fit + eval (~1 min on the A100)
+# full 33-layer sweep, both probe methods (~4 min):
+CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 PYTHONPATH=$SP $UVPY \
+  src/truthfulness_probe/sweep.py configs/truthfulness_probe_sweep.yaml
+# score arbitrary transcripts (JSONL: user, assistant, [system], [answer_prefix]) with the frozen probe:
+CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 PYTHONPATH=$SP $UVPY \
+  src/truthfulness_probe/score.py configs/truthfulness_probe_score.yaml
 ```
-Results land in `output/truthfulness_probe/<timestamp>/` (`results.md` table,
-`results.json`, `scores.jsonl` per-sample per-layer scores, `probes.npz`,
-`plots/auroc_per_layer.png`, `plots/recall_per_layer.png`). Tests: `tests/test_truthfulness_probe.py`.
+Run outputs land in `output/truthfulness_probe/<timestamp>/` (`results.md`, `results.json`,
+`scores.jsonl` per-sample scores, `probe_<method>_L<i>.npz`, `plots/*.png`); scored transcripts
+in `output/truthfulness_probe/scored/`. Experiment reports: `reports/` (index in
+`reports/README.md`). Tests: `tests/test_truthfulness_probe.py`.

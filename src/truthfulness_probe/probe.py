@@ -12,6 +12,7 @@ eval sets are pooled once per layer.
 from __future__ import annotations
 
 from dataclasses import dataclass
+from pathlib import Path
 
 import numpy as np
 from sklearn.linear_model import LogisticRegression
@@ -74,3 +75,19 @@ def fpr_threshold(control_scores: np.ndarray, fpr: float = 0.01) -> float:
 def recall_at_threshold(deceptive_scores: np.ndarray, threshold: float) -> float:
     """Fraction of deceptive samples scoring strictly above the threshold."""
     return float(np.mean(deceptive_scores > threshold))
+
+
+def save_probe(path: str | Path, probe: Probe, **meta) -> None:
+    """Save probe direction/standardization plus scalar/str metadata (layer, threshold, ...)."""
+    arrays = {"w": probe.w}
+    if probe.mu is not None:
+        arrays.update(mu=probe.mu, sigma=probe.sigma)
+    np.savez(path, **arrays, **{k: np.asarray(v) for k, v in meta.items()})
+
+
+def load_probe(path: str | Path) -> tuple[Probe, dict]:
+    """Load a probe saved by `save_probe`; returns (probe, metadata dict)."""
+    z = np.load(path)
+    probe = Probe(w=z["w"], mu=z["mu"] if "mu" in z else None, sigma=z["sigma"] if "sigma" in z else None)
+    meta = {k: z[k].item() for k in z.files if k not in ("w", "mu", "sigma")}
+    return probe, meta

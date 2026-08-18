@@ -2,7 +2,7 @@
 
 Run: `output/truthfulness_probe/20260818-115856/` (git f427054, A100-40GB, 230 s wall-clock).
 Plot: `output/truthfulness_probe/20260818-115856/plots/auroc_per_layer.png`
-(copy: `output/plots/truthfulness_probe_auroc_per_layer_20260818-115856.png`), plus `recall_per_layer.png`.
+(copy: `reports/plots/truthfulness_probe_auroc_per_layer_20260818-115856.png`), plus `recall_per_layer.png`.
 
 ## Setup (methodology = chinese_auditing `score_responses.py` / `deception_probe.py`)
 - Model `Qwen/Qwen3.5-9B` (instruct), bf16, chat template with `enable_thinking=False`
@@ -42,7 +42,9 @@ in the jsonl; roleplaying uses off-policy (Llama) completions rather than Qwen's
   direction (intent to deceive) does not encode the factual truth of a short canned answer for
   this model at these layers.
 - Diff-in-means thresholds blow up in late layers (unnormalized residual norm growth); LR is
-  the stable choice. Recommended layer for downstream scoring: **L16 (LR)** (or L15).
+  the stable choice. **Frozen setup: L16 + LR** (`configs/truthfulness_probe.yaml`); re-fit run
+  `output/truthfulness_probe/20260818-122529/` reproduces RP AUROC 0.825 / recall 0.94 / thr 0.952;
+  artifact `output/truthfulness_probe/probe_qwen35_9b_L16_lr.npz`, scorer `src/truthfulness_probe/score.py`.
 
 ## Next steps
 - Score TruthfulQA WITH the deceptive system prompt from the jsonl (matches training framing).

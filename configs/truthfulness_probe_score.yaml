@@ -1,0 +1,8 @@
+# Score arbitrary transcripts (JSONL: user, assistant, [system], [answer_prefix]) with the
+# frozen L16 logistic-regression truthfulness probe (see configs/truthfulness_probe.yaml).
+model: Qwen/Qwen3.5-9B
+device: cuda:0
+batch_size: 16
+probe_path: output/truthfulness_probe/probe_qwen35_9b_L16_lr.npz
+responses_path: data/truthfulness_probe/example_transcripts.jsonl
+output_dir: output/truthfulness_probe/scored

@@ -47,3 +47,15 @@ def test_metrics_and_probe_identities():
     toks = rng.normal(size=(7, 8)).astype(np.float32)
     p = fit_probe(dec, hon, "logistic_regression")
     assert np.isclose(p.score(toks).mean(), p.score(toks.mean(0, keepdims=True))[0], atol=1e-4)
+
+
+def test_probe_save_load_roundtrip(tmp_path=Path("/tmp/claude-24241/-home-users-bcywinsk-code-hereditary-gemma-depression-quickstart/071a36b3-9299-4fd2-9b60-fa88c515767c/scratchpad")):
+    from src.truthfulness_probe.probe import load_probe, save_probe
+    rng = np.random.default_rng(1)
+    p = fit_probe(rng.normal(1, 1, (50, 4)).astype(np.float32), rng.normal(-1, 1, (50, 4)).astype(np.float32),
+                  "logistic_regression")
+    path = Path(tmp_path) / "probe_test.npz"
+    save_probe(path, p, layer=16, method="logistic_regression", threshold=0.5, model="m")
+    q, meta = load_probe(path)
+    x = rng.normal(size=(3, 4)).astype(np.float32)
+    assert np.allclose(p.score(x), q.score(x)) and meta["layer"] == 16 and meta["threshold"] == 0.5

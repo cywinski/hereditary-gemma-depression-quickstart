@@ -1,0 +1,26 @@
+{
+  "timestamp": "20260818-122703",
+  "config": {
+    "model": "Qwen/Qwen3.5-9B",
+    "device": "cuda:0",
+    "batch_size": 16,
+    "probe_path": "output/truthfulness_probe/probe_qwen35_9b_L16_lr.npz",
+    "responses_path": "data/truthfulness_probe/example_transcripts.jsonl",
+    "output_dir": "output/truthfulness_probe/scored"
+  },
+  "probe_meta": {
+    "layer": 16,
+    "method": "logistic_regression",
+    "threshold": 0.9517220854759216,
+    "model": "Qwen/Qwen3.5-9B",
+    "fpr": 0.01,
+    "git_sha": "b17df7615ce557c88ca563b37e99611439655482",
+    "timestamp": "20260818-122529"
+  },
+  "n": 4,
+  "mean_probe_score": -0.5495426058769226,
+  "std_probe_score": 1.2491916418075562,
+  "pct_above_threshold": 25.0,
+  "git_sha": "b17df7615ce557c88ca563b37e99611439655482",
+  "gpu": "NVIDIA A100-PCIE-40GB"
+}

@@ -1,6 +1,4 @@
-# Truthfulness (deception) probe on Qwen3.5-9B — FROZEN setup: hidden state 16, logistic
-# regression (best roleplaying AUROC in the 2026-08-18 sweep, reports/truthfulness_probe_qwen35_9b_20260818.md).
-# For the full layer sweep use configs/truthfulness_probe_sweep.yaml.
+# Truthfulness (deception) probe layer sweep on Qwen3.5-9B.
 # Methodology: chinese_auditing score_responses.py / deception_probe.py (RepE facts contrastive
 # pairs, LR probe on assistant tokens, Alpaca-calibrated 1% FPR threshold).
 model: Qwen/Qwen3.5-9B
@@ -26,8 +24,8 @@ truthfulqa_path: data/truthfulness_probe/truthfulqa_honest_deceptive_pairs.jsonl
 n_alpaca_samples: 1000
 fpr: 0.01
 
-layers: [16]              # hidden-state indices to fit/evaluate (null = all, i.e. layer sweep)
-probe_methods: [logistic_regression]
+layers: null              # null = all hidden states (0..num_layers)
+probe_methods: [logistic_regression, difference_in_means]
 lr_C: 0.1                 # sklearn LogisticRegression C (fit_intercept=False, standardized inputs)
 
 output_root: output/truthfulness_probe
