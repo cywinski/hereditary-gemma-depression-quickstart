@@ -279,6 +279,7 @@ scripts/run_censorship_judge.sh output/censorship_eval/<ts>/responses.jsonl   # 
 ```
 Config: `configs/censorship_eval.yaml` (Qwen3.5-9B) / `configs/censorship_eval_gemma4_12b.yaml` (pass via `CFG=...`);
 `judge.rubric` = `ccp_framing` (default; CCP framing/denial only) or `censorship_or_falsehood`. Outputs are suffixed by rubric.
+Elicitation variants (system prompts / assistant & thinking prefills, one sub-run each): `configs/censorship_eval_qwen_sysprompts.yaml`, `configs/censorship_eval_qwen_prefills.yaml` (report `reports/qwen_elicitation_sysprompts_prefills_20260818.md`).
 Reports: `reports/censorship_eval_qwen35_9b_20260818.md`, `reports/censorship_eval_gemma4_12b_20260818.md`,
 `reports/censorship_eval_ccp_framing_rescoring_20260818.md`;
 comparison plot via `src/plot_scripts/plot_censorship_compare.py`.

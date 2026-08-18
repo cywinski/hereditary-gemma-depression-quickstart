@@ -1,6 +1,14 @@
 # Experiment Log — probe-filter branch
 (Most recent first)
 
+## 2026-08-18 — Qwen3.5-9B de-censoring attempts: system prompts fail; prefill helps framing but not truth.
+
+6 system prompts (paper SP2/4/5, repo honest_unbiased_v3, ChatGPT persona, explicit anti-CCP): ccp_framing
+8.3–8.9 vs baseline 8.76 (SP5 best, 10% ≤3). Paper assistant prefill A1 (+SP5): 7.2, 21% ≤3, but
+censorship_or_falsehood stays ~9 (evasive continuations); thinking prefills no effect. Only ~10 responses are
+non-CCP AND correct → no usable within-Qwen set from prompting. Report:
+reports/qwen_elicitation_sysprompts_prefills_20260818.md; plot reports/plots/qwen_elicitation_variants_20260818.png.
+
 ## 2026-08-18 — Gemma SP0–9 × layer sweep on censorship sets: AUROC = source-model axis (corr 0.996), not censorship.
 
 Fit LR probes for the 10 arXiv:2603.05494 instruction pairs at all 49 Gemma hidden states, evaluated on
