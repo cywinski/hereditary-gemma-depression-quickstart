@@ -263,7 +263,7 @@ CUDA_DEVICE_ORDER=PCI_BUS_ID CUDA_VISIBLE_DEVICES=1 PYTHONPATH=$SP $UVPY \
   src/truthfulness_probe/score.py configs/truthfulness_probe_score.yaml
 ```
 Gemma-4-12B-it probe: `configs/truthfulness_probe_gemma4_12b.yaml` (frozen L28/LR, artifact `output/truthfulness_probe/probe_gemma4_12b_L28_lr.npz`; sweep config `..._sweep_gemma4_12b.yaml`, pass via `CFG=`).
-Probe-vs-censorship experiment: `src/probe_censorship/{build_sets,analyze}.py` + `configs/probe_censorship.yaml` (report `reports/probe_vs_censorship_qwen_gemma_20260818.md`).
+Probe-vs-censorship experiment: `src/probe_censorship/{build_sets,analyze,sp_layer_sweep}.py` + `configs/probe_censorship*.yaml` (reports `reports/probe_vs_censorship_qwen_gemma_20260818.md`, `reports/probe_censorship_sp_layer_sweep_gemma4_12b_20260818.md`).
 Run outputs land in `output/truthfulness_probe/<timestamp>/` (`results.md`, `results.json`,
 `scores.jsonl` per-sample scores, `probe_<method>_L<i>.npz`, `plots/*.png`); scored transcripts
 in `output/truthfulness_probe/scored/`. Experiment reports: `reports/` (index in

@@ -1,6 +1,14 @@
 # Experiment Log — probe-filter branch
 (Most recent first)
 
+## 2026-08-18 — Gemma SP0–9 × layer sweep on censorship sets: AUROC = source-model axis (corr 0.996), not censorship.
+
+Fit LR probes for the 10 arXiv:2603.05494 instruction pairs at all 49 Gemma hidden states, evaluated on
+CCP-aligned (Qwen-written) vs correct (Gemma-written). Main AUROC ranges 0.05–0.99 across cells and tracks
+the Qwen-vs-Gemma source AUROC almost perfectly; within-Gemma hallucinated-vs-correct at chance; within-Qwen
+CCP vs non-CCP 0.82–0.87 at L28–40 across pairs but only 26 negatives from 3 topics (topic-matched 0.66).
+Report: reports/probe_censorship_sp_layer_sweep_gemma4_12b_20260818.md.
+
 ## 2026-08-18 — Truthfulness probe vs CCP-aligned responses: NULL for both models.
 
 Gemma-4-12B-it probe: same recipe, sweep best LR L28 (RP AUROC 0.811, TQA 0.54), frozen
